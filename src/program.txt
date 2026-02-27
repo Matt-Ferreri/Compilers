@@ -1,0 +1,39 @@
+{
+  {
+    {
+      print(1)
+    }
+  }
+}$
+{
+  int a
+  a = 1
+  int b
+  b = 2
+  print(a)
+  print(b)
+}$
+{
+  int abc
+}$
+
+
+{
+  int a
+  a = 1+2+3+4
+  string b
+  b = "hello world"
+  boolean c
+  c = (a == 10)
+  if (c != false) {
+    print(b)
+    while (a == 10) {
+      print("loop")
+    }
+  }
+}$
+
+{
+  inta
+  a=1
+}$

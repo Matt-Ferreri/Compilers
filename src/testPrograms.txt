@@ -1,0 +1,42 @@
+{
+  int a = 1
+  int b = 2
+  int c = 3
+
+  a = b
+  a == b
+  a != b
+  +
+
+  = 
+  ==
+  !=
+
+  !      
+  +=     
+  =!     
+  !+     
+  !==    
+  ===    
+    
+
+  print a
+}
+$ 
+
+
+
+{
+  int x = 0
+  string name = "Hello World"
+  print x
+  if true   /*ggrefref*/
+  {
+    boolean flag
+    print name fdsf
+  }
+}
+$
+
+{intx=0stringname="Hello"printxiftrue{/*abc*/}{booleanflagprintname}$
+
