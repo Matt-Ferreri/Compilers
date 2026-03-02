@@ -26,7 +26,7 @@
   boolean c
   c = (a == 10)
   if (c != false) {
-    print(b)
+    print(b)$
     while (a == 10) {
       print("loop")
     }
@@ -34,6 +34,6 @@
 }$
 
 {
-  inta
-  a=1
-}$
+  /*inta
+  a=1*/
+}$ {}

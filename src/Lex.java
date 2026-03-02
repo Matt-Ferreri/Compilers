@@ -68,6 +68,11 @@ public class Lex {
         System.out.println(message);
     }
 
+    // takes message in as a variable and always warning prints message
+    private void logWarning(String message) {
+        System.out.println(message);
+    }
+
     // list of tokens to be returned for parser
     List<Token> tokens = new ArrayList<>();
 
@@ -399,6 +404,8 @@ public class Lex {
         // start with empty token
         String token = "";
 
+        char c = ' ';
+
         // start with current state at begin
         state currentState = state.BEGIN;
 
@@ -406,7 +413,7 @@ public class Lex {
         for (int currentIndex = 0; currentIndex < sourceCode.length(); currentIndex++) {
 
             // get the current character
-            char c = sourceCode.charAt(currentIndex);
+            c = sourceCode.charAt(currentIndex);
 
             // get the type of character at the current index
             characterType charType = getCharacterType(c);
@@ -438,7 +445,7 @@ public class Lex {
 
                     case NUMBER:
                         // calls the log method and prints it out if verbose mode is on
-                        log("LEXER: " + characterType.DIGIT + ": [ " + token + " ] number " + programNum + " at line "
+                        log("LEXER: " + characterType.DIGIT + ": [ " + token + " ] number at line "
                                 + currentLine + ", col " + lastIndex);
 
                         // add the token to the list of tokens of type digit, with the value of the
@@ -455,6 +462,9 @@ public class Lex {
                         // add the token to the list of tokens of type string, with the value of the
                         // token, the line number, and the column number
                         tokens.add(new Token(characterType.STRING, token, currentLine, lastIndex - token.length()));
+
+                        // move on to next character
+                        lastIndex++;
                         break;
 
                     case EQUAL_CHECK:
@@ -462,12 +472,15 @@ public class Lex {
                     case EQUAL:
                         // if the length is 2, it is a Boolop so print that
                         if (token.length() == 2) {
+                            // decrement since the character is 2 characters long and we want to print the first character
+                            lastIndex--;
                             log("LEXER: " + characterType.BOOLOP + ": [ " + token + " ] at line " + currentLine
                                     + ", col " + lastIndex);
 
                             // after the log, add the token to the list of tokens of type boolop, with the
                             // value of the token, the line number, and the column number
                             tokens.add(new Token(characterType.BOOLOP, token, currentLine, lastIndex - token.length()));
+
                         }
 
                         // if it is not a boolop, go back to the last spot so it can print out that
@@ -489,7 +502,7 @@ public class Lex {
                     case COMMENT:
                     case BEGIN_COMMENT_CHECK:
                     case END_COMMENT_CHECK:
-
+                        lastIndex++; // move on to next character
                         // do not print anything since comments are ignored by the lexer
                         break;
                     default:
@@ -501,6 +514,8 @@ public class Lex {
                         // token, the line number, and the column number
                         tokens.add(new Token(getCharacterType(sourceCode.charAt(currentIndex)), token, currentLine,
                                 lastIndex - token.length()));
+                        // move on to next character
+                        lastIndex++;
                         break;
                 }
                 // reset token and state
@@ -550,8 +565,7 @@ public class Lex {
                     hasErrors = true;
                     errors++;
                 }
-                // reset token and increment
-                lastIndex++;
+                // reset token 
                 token = "";
 
                 // if theres a new line, reset line index if no new last index
@@ -590,8 +604,8 @@ public class Lex {
                 tokens.add(new Token(characterType.EOP, "$", currentLine, lastIndex - token.length()));
 
                 // Reset state, update line and index for the new program
-                programNum++;
                 lastIndex++;
+                programNum++;
                 token = "";
                 currentState = state.BEGIN;
 
@@ -663,6 +677,22 @@ public class Lex {
             }
             currentState = nextState;
         }
+        
+
+        // check for warning if the user is in the comment state at the end of the program
+        // will throw a warning if in comment state, check for comment state, or end comment state as long as the character is not / which would close the comment
+        if (currentState == state.COMMENT || currentState == state.BEGIN_COMMENT_CHECK || (currentState == state.END_COMMENT_CHECK && c != '/')) {
+            warnings++;
+            logWarning("LEXER: WARNING: Unterminated comment at end of the program");
+        }
+System.out.println(tokens.get(tokens.size() - 1).tokenType);
+
+        // check to see what last token is, if it is not an EOP, give a warning that it may be forgotten
+        if (tokens.get(tokens.size() - 1).tokenType != characterType.EOP) {
+            warnings++;
+            logWarning("LEXER: Warning: May have forgotten EOP");
+        }
+
         // return the list of tokens
         return tokens;
     }

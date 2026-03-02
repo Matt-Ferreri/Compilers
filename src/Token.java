@@ -2,6 +2,7 @@
 
 public class Token {
 
+    public static Object characterType;
     // fields needed for the token object
     // need the type of token, what the token is, and where it is
     public final Lex.characterType tokenType;
