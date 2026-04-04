@@ -28,7 +28,7 @@ $
 
 {
   int x = 0
-  string name = "Hello World"
+  string name = "hello world"
   print x
   if true   /*ggrefref*/
   {
@@ -38,5 +38,5 @@ $
 }
 $
 
-{intx=0stringname="Hello"printxiftrue{/*abc*/}{booleanflagprintname}$
+{intxx=0stringnn="hello"printxiftrue{/*abc*/}{booleanflagprintname}$
 

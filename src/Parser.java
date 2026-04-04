@@ -1,84 +1,147 @@
+import java.util.ArrayList;
 import java.util.List;
 
 public class Parser {
 
+    // Thrown by goToNextProgram to use in catch block for error recovery
+    private static class ParseErrorException extends RuntimeException {}
+
     // list of tokens and the current position in the token stream
     private List<Token> tokens;
     private int current;
+    int currentProgram = 1;
 
     // start with no errors or warnings
     boolean hasErrors = false;
     boolean hasWarnings = false;
-    int errors = 0;
     int warnings = 0;
+
+    // if we get an error, set this to true a new program is reached
+    private boolean currentProgramHasErrors = false;
 
     private boolean verbose;
 
-    // takes in the message, if verbose is on, prints the message
-    private void log(String message) {
-        if (verbose) {
-            System.out.println(message);
-        }
-    }
+    // create a new tree
+    Tree tree = new Tree();
+    // create list of trees
+    List<Tree> trees = new ArrayList<>();
+
 
     // takes message in as a variable and and always prints message
     private void logError(String message) {
         System.out.println(message);
+        // inform the user that there was an error and we are not parsing current
+        // program any further
+        // move on to the next program if there are more programs to parse
+        System.out.println("Errors found! Stopping program " + currentProgram + " and moving on to next");
+        return;
     }
 
-    // takes message in as a variable and always warning prints message
-    private void logWarning(String message) {
-        System.out.println(message);
-    }
 
-    // if there is an error, set hasErrors to true
+    // if there is an error return true
     public boolean parseErrors() {
-        // check for lexing errors
-        if (hasErrors) {
-            logError("Stopping program ... " + errors + " error(s) found.");
-        }
         return hasErrors;
     }
 
     // runs the parser
-    public void run(List<Token> tokens, boolean isVerbose) {
+    public List<Tree> run(List<Token> tokens, boolean isVerbose) {
         // set the verbose, tokens, and current position
         this.verbose = isVerbose;
         this.tokens = tokens;
         this.current = 0;
 
-        // perform recursive descent, start at the outmost part "Program"
-        parseProgram();
+        // start the parsing
+        performParse();
+
+        // return the cst
+        return trees;
     }
 
-    // it takes in the expected charcater type and compares it to the current token
-    // type
-    private void match(Lex.characterType expected) {
+    public void performParse() {
+        // perform recursive descent start at parseProgram 
+        // while the current index is less than the size of the tokens, parse the
+        // program, used if there are multiple programs in the file
+        while (current < tokens.size()) {
+            // reset tree and errors
+            tree = new Tree();
+            currentProgramHasErrors = false;
+            try {
+                // perform the parse, print the tree and end of program message, add to the list of tress, end increment program counter
+                parseProgram();
+                // if verbose mode is on print out the tree, do everything else no matter what
+                if(verbose){
+                System.out.print(tree);
+                System.out.print("End of program: " + currentProgram);
+                }
+                trees.add(tree);
+                currentProgram++;
+            } catch (ParseErrorException e) {
+                hasErrors = true;
+                currentProgram++;
+            }
+        }
+    }
 
-        // if the current index is greater than the size of the tokens, print an error
+    // it takes in the expected charcater type and compares it to the current token type
+    private void match(Lex.characterType expected) {
+        // ensure current isn't bigger than the size of the token stream
         if (current >= tokens.size()) {
-            logError("PARSER: Expected " + expected + " but got " + tokens.get(current).tokenType
-                    + " at line " + tokens.get(current).line + " and column "
-                    + tokens.get(current).position);
-            hasErrors = true;
-            errors++;
+            // Only report errors once per program
+            if (!currentProgramHasErrors) {
+                logError("PARSER: Unexpected end of input.");
+                // set the error flags for main and current program to true
+                hasErrors = true;
+                currentProgramHasErrors = true;
+            }
+            goToNextProgram();
             return;
         }
+
         // if the current token type is the expected type, consume the token and return
         if (tokens.get(current).tokenType == expected) {
+            // add the value of the token to the tree of type leaf
+            tree.addNode(tokens.get(current).value, "leaf");
             current++; // consume the token
             return;
         }
+
+
         // if the current token type is not the expected type, print an error
         logError("PARSER: Expected " + expected + " but got " + tokens.get(current).tokenType
                 + " at line " + tokens.get(current).line + " and column "
                 + tokens.get(current).position);
+        // set the error flags for main and current program to true
         hasErrors = true;
-        errors++;
+        currentProgramHasErrors = true;
+
+        // call goToNextProgram to go to the next program
+        goToNextProgram();
+    }
+
+    // if there is an error go to the end of the current program
+    // look for EOP token and consume it, then throw to get to the next program
+    private void goToNextProgram() {
+        // if the current index is greater than the size of the token stream, throw an error
+        if (current >= tokens.size()) {
+            throw new ParseErrorException();
+        }
+        // while the current index is less than the size of the token stream and the current token type is not EOP, increment the current index
+        while (current < tokens.size() && tokens.get(current).tokenType != Lex.characterType.EOP) {
+            current++;
+        }
+        // if the current index is less than the size of the token stream, consume the EOP token
+        if (current < tokens.size()) {
+            current++;  // consume EOP
+        }
+        throw new ParseErrorException();  // unwind so performParse can parse the next program
     }
 
     // a program is a Block + $
     private void parseProgram() {
+        currentProgramHasErrors = false;  // new program, so we have no errors
+        // add the program to the CST
+        tree.addNode("Program", "branch");
+
         // a program is a Block + $
         parseBlock();
         // the program must end with $
@@ -87,16 +150,29 @@ public class Parser {
 
     // a parseBlock is made up of {statementList}
     private void parseBlock() {
+        // add the block to the CST
+        tree.addNode("Block", "branch");
+
         // the block must start with Left Brace
         match(Lex.characterType.LBRACE);
         // block is made up of a statementList
         parseStatementList();
         // the block must end with Right Brace
         match(Lex.characterType.RBRACE);
+
+        // move up in the tree
+        tree.endChildren();
     }
 
     // statement list is made up of a Statement StatementList OR a null
     private void parseStatementList() {
+        // add StatementList to CST
+        tree.addNode("StatementList", "branch");
+        if (current >= tokens.size()) {
+            tree.endChildren();
+            return;
+        }
+
         Lex.characterType currentToken = tokens.get(current).tokenType;
         // if the next character is the statement, recursively call statement followed
         // by statement list, if not, do nothing
@@ -105,17 +181,33 @@ public class Parser {
                 currentToken == Lex.characterType.ID || currentToken == Lex.characterType.LBRACE) {
             parseStatement();
             parseStatementList();
+
         }
         // if it isn't a statement followed by a statement list, do nothing
-        else {
+        else if (currentToken == Lex.characterType.RBRACE){
             // do nothing
             // its a E production
         }
+        // if it is not a statement followed by a statement list or a right brace, print an error
+        else{
+            logError("PARSER: Expected a statement or a right brace but got " + currentToken + " at line " + tokens.get(current).line + " and column " + tokens.get(current).position);
+            hasErrors = true;
+            currentProgramHasErrors = true;
+            goToNextProgram();
+        }
+        // move up in the tree no matter what
+        tree.endChildren();
     }
 
     // statement can be either a print, assugnment, varDec, while, if, or block
     // must handle each case
     private void parseStatement() {
+        // add Statement to CST
+        tree.addNode("Statement", "branch");
+        if (current >= tokens.size()) {
+            tree.endChildren();
+            return;
+        }
         Lex.characterType currentToken = tokens.get(current).tokenType;
 
         // if the current character is print, go to parsePrintStatement
@@ -146,22 +238,21 @@ public class Parser {
             parseIfStatement();
         }
 
-        // if its a left brace, go to parseBlock 
+        // if its a left brace, go to parseBlock
         else if (currentToken == Lex.characterType.LBRACE) {
             parseBlock();
         }
 
-        // if its none of those, print an error
-        else {
-            logError("PARSER: Expected a statement but got " + currentToken + " at line " + tokens.get(current).line + " and column " + tokens.get(current).position);
-            hasErrors = true;
-            errors++;
-        }
+        // move up in the tree
+        tree.endChildren();
     }
 
     // a print statement is the keyword print, followed by (, an expression, then a
     // )
     private void parsePrintStatement() {
+        // add PrintStatement to CST
+        tree.addNode("PrintStatement", "branch");
+
         // match the print statement
         match(Lex.characterType.PRINT);
         // then match the left paren
@@ -170,49 +261,82 @@ public class Parser {
         parseExpr();
         // match the right paren
         match(Lex.characterType.RPAREN);
+
+        // move up in the tree
+        tree.endChildren();
     }
 
     // an assignmentStatement is an ID, followed by an equal, followed by an Expr
     private void parseAssignmentStatment() {
+        // add AssignmentStatement to CST
+        tree.addNode("AssignmentStatement", "branch");
+
         // starts with an ID
         parseID();
         // next must match an equal sign
         match(Lex.characterType.EQUAL);
         // then an expr
         parseExpr();
+
+        // move up in the tree
+        tree.endChildren();
     }
 
     // a varDecl is a type followed by an ID
     private void parseVarDecl() {
+        // add VarDecl to CST
+        tree.addNode("VarDecl", "branch");
+
         // first check for type
         parseType();
         // then check for an ID
         parseID();
+
+        // move up in the tree
+        tree.endChildren();
     }
 
     // a whileStatement first must match "while", then is a BooleanExpr, then a
     // block
     private void parseWhileStatement() {
+        // add WhileStatement to CST
+        tree.addNode("WhileStatement", "branch");
+
         // first match the word while, which is labeled loop
         match(Lex.characterType.LOOP);
         // next check for a BooleanExpr
         parseBooleanExpr();
         // ends with a Block
         parseBlock();
+
+        // move up in the tree
+        tree.endChildren();
     }
 
     // an ifstatment starts with "if", then is a BooleanExpr, then a block
     private void parseIfStatement() {
+        // add IfStatement to CST
+        tree.addNode("IfStatement", "branch");
+
         // first match the word IF
         match(Lex.characterType.IF);
         // next check for a BooleanExpr
         parseBooleanExpr();
         // ends with a Block
         parseBlock();
+
+        // move up in the tree
+        tree.endChildren();
     }
 
     // an expr is either an IntExpr, a StringExpr, a BooleanExpr, or an ID
     private void parseExpr() {
+        if (current >= tokens.size())
+            return;
+
+        // add Expr to CST
+        tree.addNode("Expr", "branch");
+
         Lex.characterType currentToken = tokens.get(current).tokenType;
         // if the character is a digit, go into parseIntExpr
         if (currentToken == Lex.characterType.DIGIT) {
@@ -222,7 +346,8 @@ public class Parser {
         else if (currentToken == Lex.characterType.STRING) {
             parseStringExpr();
         }
-        // if it is a left paren go to parseBooleanExpr or if its a character type BoolVal
+        // if it is a left paren go to parseBooleanExpr or if its a character type
+        // BoolVal
         else if (currentToken == Lex.characterType.LPAREN || currentToken == Lex.characterType.BOOLVAL) {
             parseBooleanExpr();
         }
@@ -230,32 +355,61 @@ public class Parser {
         else if (currentToken == Lex.characterType.ID) {
             parseID();
         }
+        // if it is not an ID, IntExpr, StringExpr, BooleanExpr, or LPAREN, print an error
+        else{
+            logError("PARSER: Expected an ID, IntExpr, StringExpr, BooleanExpr, or LPAREN but got " + currentToken + " at line " + tokens.get(current).line + " and column " + tokens.get(current).position);
+            hasErrors = true;
+            currentProgramHasErrors = true;
+            goToNextProgram();
+        }
+
+        // move up in the tree
+        tree.endChildren();
     }
 
     // in parseIntExpr, always go to digit, then check if the next character is a
     // plus
     private void parseIntExpr() {
+        // add IntExpr to CST
+        tree.addNode("IntExpr", "branch");
 
         // first consume the digit
         parseDigit();
 
         // get the type of token after the digit is consumed
+        if (current >= tokens.size()) {
+            tree.endChildren();
+            return;
+        }
         Lex.characterType currentToken = tokens.get(current).tokenType;
 
-        // next, if the next character is a PLUS, do parseIntop then parse Expr
+        // next, if the next character is a PLUS, do parseIntOp then parse Expr
         // if it isn't do nothing
         if (currentToken == Lex.characterType.PLUS) {
-            // do parseIntop then parseExpr
-            parseIntop();
+            // do parseIntOp then parseExpr
+            parseIntOp();
             parseExpr();
         }
+
+        // move up in the tree
+        tree.endChildren();
     }
 
     // a StringExpr is a quote followed by a CharList, followed by a quote
     // a string token is a "" around the string, only need to match to a string
     private void parseStringExpr() {
-        // match the string since a string is a " with words, then a "
+        // add StringExpr to CST
+        tree.addNode("StringExpr", "branch");
+
+        // opening quote
         match(Lex.characterType.STRING);
+        // contents of the string
+        parseCharList();
+        // closing quote
+        match(Lex.characterType.STRING);
+
+        // move up in the tree
+        tree.endChildren();
     }
 
     // a BooleanExpr is a ( an expression, a boolop, another expression, then a )
@@ -263,6 +417,13 @@ public class Parser {
     // check first character, if its a ( do the first, if its a boolval just
     // parseBoolVal
     private void parseBooleanExpr() {
+        // add BooleanExpr to CST
+        tree.addNode("BooleanExpr", "branch");
+        if (current >= tokens.size()) {
+            tree.endChildren();
+            return;
+        }
+
         Lex.characterType currentToken = tokens.get(current).tokenType;
 
         if (currentToken == Lex.characterType.LPAREN) {
@@ -281,17 +442,33 @@ public class Parser {
         else if (currentToken == Lex.characterType.BOOLVAL) {
             parseBoolVal(); // if its a boolval just do parseBoolVal
         }
+
+        // move up in the tree
+        tree.endChildren();
     }
 
     // an ID is a char, so do parseChar
     private void parseID() {
+        // add ID to CST
+        tree.addNode("ID", "branch");
+
         // go to parseChar since that is the only thing Id does
         parseChar();
+
+        // move up in the tree
+        tree.endChildren();
     }
 
     // a charList is either a char followed by a Charlist, a space followed by a
     // Charlist, or nothing
     private void parseCharList() {
+        // add CharList to CST
+        tree.addNode("CharList", "branch");
+        if (current >= tokens.size()) {
+            tree.endChildren();
+            return;
+        }
+
         // get the type of the current token
         Lex.characterType currentToken = tokens.get(current).tokenType;
 
@@ -301,9 +478,11 @@ public class Parser {
             parseChar();
             parseCharList();
         }
-        // spaces get discarded in the lexer so they do not need to be checked for
-        // if it is a character or a space (since discarded) it will contine, or else
-        // itll do nothing
+        // if current token is a space, consume it and continue
+        else if (currentToken == Lex.characterType.WHITESPACE) {
+            match(Lex.characterType.WHITESPACE);
+            parseCharList();
+        }
 
         // else nothing happens and its a ɛ production
         else {
@@ -311,35 +490,53 @@ public class Parser {
             // it’s a ɛ
             // production
         }
+
+        // move up in the tree
+        tree.endChildren();
     }
 
+    /*
+     * since all of the following are matching to a token
+     * we are adding leaves to the tree for each token.
+     * we do not need to add any nodes since match already adds the
+     * value of the token to the tree of type leaf
+     */
     // in parseType match to the type type
     private void parseType() {
+        // match the type
         match(Lex.characterType.TYPE);
+
     }
 
     // in parseChar match to the type ID
     private void parseChar() {
+        // match the digit
         match(Lex.characterType.ID);
+
     }
 
     // in parseDigit, must match type DIGIT
     private void parseDigit() {
         match(Lex.characterType.DIGIT);
+
     }
 
     // in parseBoolOp, must be either == or !=
     private void parseBoolOp() {
+        // match the boolean operator
         match(Lex.characterType.BOOLOP);
+
     }
 
     // must be match true or false, so match a BOOLVAL
     private void parseBoolVal() {
+        // match the boolean value
         match(Lex.characterType.BOOLVAL);
     }
 
     // must match the plus symbol
-    private void parseIntop() {
+    private void parseIntOp() {
+        // match the plus sign
         match(Lex.characterType.PLUS);
     }
 }

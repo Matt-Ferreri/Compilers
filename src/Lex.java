@@ -446,7 +446,7 @@ public class Lex {
                     case NUMBER:
                         // calls the log method and prints it out if verbose mode is on
                         log("LEXER: " + characterType.DIGIT + ": [ " + token + " ] number at line "
-                                + currentLine + ", col " + lastIndex);
+                                + currentLine + ", col " + (lastIndex - token.length()));
 
                         // add the token to the list of tokens of type digit, with the value of the
                         // token, the line number, and the column number
@@ -455,13 +455,37 @@ public class Lex {
                         break;
 
                     case STRING:
-                        // print that it is a string and at its location if verbose mode is on
-                        log("LEXER: " + characterType.STRING + ": [ " + token + " ] at line " + currentLine + ", col "
-                                + lastIndex);
+                        // a string is a " followed by a CharList followed by a "
+                        // used for getting the length of the string
+                        int openingQuoteCol = lastIndex - token.length() - 1;
+                        // print the opening quote
+                        log("LEXER: " + characterType.STRING + ": [ \" ] at line " + currentLine + ", col "
+                                + openingQuoteCol);
+                        // add the opening quote to the list of tokens
+                        tokens.add(new Token(characterType.STRING, "\"", currentLine, openingQuoteCol));
+                        // loop through the string adding each character to the list of tokens
+                        for (int i = 0; i < token.length(); i++) {
+                            // get the character at the current index
+                            char stringChar = token.charAt(i);
+                            // get the column number of the current character
+                            int charCol = openingQuoteCol + 1 + i;
+                            // if the character is a space, print that it is a whitespace and add it to the list of tokens
+                            if (stringChar == ' ') {
+                                log("LEXER: " + characterType.WHITESPACE + ": [   ] at line " + currentLine
+                                        + ", col " + charCol);
+                                tokens.add(new Token(characterType.WHITESPACE, " ", currentLine, charCol));
+                            } else {
+                                log("LEXER: " + characterType.ID + ": [ " + stringChar + " ] at line " + currentLine
+                                        + ", col " + charCol);
+                                tokens.add(new Token(characterType.ID, String.valueOf(stringChar), currentLine, charCol));
+                            }
+                        }
 
-                        // add the token to the list of tokens of type string, with the value of the
-                        // token, the line number, and the column number
-                        tokens.add(new Token(characterType.STRING, token, currentLine, lastIndex - token.length()));
+                        // print the closing quote
+                        log("LEXER: " + characterType.STRING + ": [ \" ] at line " + currentLine + ", col "
+                                + lastIndex);   
+                        // add the closing quote to the list of tokens
+                        tokens.add(new Token(characterType.STRING, "\"", currentLine, lastIndex));
 
                         // move on to next character
                         lastIndex++;
@@ -479,7 +503,7 @@ public class Lex {
 
                             // after the log, add the token to the list of tokens of type boolop, with the
                             // value of the token, the line number, and the column number
-                            tokens.add(new Token(characterType.BOOLOP, token, currentLine, lastIndex - token.length()));
+                            tokens.add(new Token(characterType.BOOLOP, token, currentLine, lastIndex));
 
                         }
 
@@ -494,7 +518,7 @@ public class Lex {
                             // after the log, add the token to the list of tokens of the appropriate type,
                             // token, the line number, and the column number
                             tokens.add(new Token(getCharacterType(sourceCode.charAt(currentIndex)), token, currentLine,
-                                    lastIndex - token.length()));
+                                    lastIndex));
                         }
                         lastIndex++;
                         break;
@@ -513,7 +537,7 @@ public class Lex {
                         // after the log, add the token to the list of tokens of the appropriate type,
                         // token, the line number, and the column number
                         tokens.add(new Token(getCharacterType(sourceCode.charAt(currentIndex)), token, currentLine,
-                                lastIndex - token.length()));
+                                lastIndex));
                         // move on to next character
                         lastIndex++;
                         break;
@@ -535,7 +559,7 @@ public class Lex {
                 // since this is an error, the token is the character itself is the token and
                 // the program will stop
                 tokens.add(new Token(characterType.OTHER, sourceCode.charAt(currentIndex) + "", currentLine,
-                        lastIndex - token.length()));
+                        lastIndex));
 
                 // reset token and state and move on and update counter
                 hasErrors = true;
@@ -559,7 +583,7 @@ public class Lex {
                     // since this is an error, the token is the character itself is the token and
 
                     tokens.add(new Token(characterType.OTHER, sourceCode.charAt(currentIndex) + "", currentLine,
-                            lastIndex - token.length()));
+                            lastIndex));
 
                     // reset token and state and move on and update counter
                     hasErrors = true;
@@ -677,20 +701,12 @@ public class Lex {
             }
             currentState = nextState;
         }
-        
-
-        // check for warning if the user is in the comment state at the end of the program
-        // will throw a warning if in comment state, check for comment state, or end comment state as long as the character is not / which would close the comment
-        if (currentState == state.COMMENT || currentState == state.BEGIN_COMMENT_CHECK || (currentState == state.END_COMMENT_CHECK && c != '/')) {
-            warnings++;
-            logWarning("LEXER: WARNING: Unterminated comment at end of the program");
-        }
-System.out.println(tokens.get(tokens.size() - 1).tokenType);
 
         // check to see what last token is, if it is not an EOP, give a warning that it may be forgotten
         if (tokens.get(tokens.size() - 1).tokenType != characterType.EOP) {
             warnings++;
-            logWarning("LEXER: Warning: May have forgotten EOP");
+            logWarning("LEXER: Warning: May have forgotten EOP, adding one to the list of tokens");
+            tokens.add(new Token(characterType.EOP, "$", currentLine, lastIndex - token.length()));
         }
 
         // return the list of tokens
