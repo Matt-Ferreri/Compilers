@@ -49,6 +49,11 @@ public class Tree {
         }
     }
 
+    // expose the root so later phases can traverse the tree
+    public Node getRoot() {
+        return root;
+    }
+
     // String representation
     public String toString() {
         StringBuilder traversalResult = new StringBuilder();

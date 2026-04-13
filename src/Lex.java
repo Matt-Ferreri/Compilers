@@ -29,7 +29,7 @@ public class Lex {
     enum characterType {
         ID, DIGIT, LBRACE, RBRACE, LPAREN, RPAREN, STRING, PLUS, SLASH, STAR,
         EQUAL, BOOLOP, EXCLAMATION, WHITESPACE, NEWLINE, EOP, OTHER,
-        PRINT, LOOP, IF, TYPE, BOOLVAL
+        PRINT, WHILE, IF, TYPE, BOOLVAL
     }
 
     // start with no errors
@@ -46,8 +46,8 @@ public class Lex {
 
     // list of keywords mapped to their corresponding token type
     // will be used by Parser so it can identifty what type it is
-    private static final String[][] KEYWORDS = {
-            { "print", "print" }, { "while", "loop" }, { "if", "if" }, { "int", "Type" }, { "string", "Type" },
+    public static final String[][] KEYWORDS = {
+            { "print", "print" }, { "while", "while" }, { "if", "if" }, { "int", "Type" }, { "string", "Type" },
             { "boolean", "Type" }, { "false", "BoolVal" }, { "true", "BoolVal" }
     };
 
@@ -73,13 +73,92 @@ public class Lex {
         System.out.println(message);
     }
 
-    // list of tokens to be returned for parser
+    // list of tokens to be returned for the current program
     List<Token> tokens = new ArrayList<>();
+    // raw source index so main can ask for one program at a time
+    private int sourcePosition = 0;
+
+    // reset per-program lexer state before lexing the next program
+    private void resetRunState(boolean isVerbose) {
+        this.verbose = isVerbose;
+        this.tokens = new ArrayList<>();
+        this.hasErrors = false;
+        this.warnings = 0;
+        this.errors = 0;
+    }
+
+    // check whether there is another non-whitespace character left to lex
+    public boolean hasMorePrograms(String sourceCode) {
+        for (int i = sourcePosition; i < sourceCode.length(); i++) {
+            if (!Character.isWhitespace(sourceCode.charAt(i))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // pull out exactly one program from the raw source, stopping at the next EOP
+    // while still respecting strings and block comments
+    private String extractNextProgram(String sourceCode) {
+        if (!hasMorePrograms(sourceCode)) {
+            return "";
+        }
+
+        StringBuilder program = new StringBuilder();
+        boolean inString = false;
+        boolean inComment = false;
+
+        while (sourcePosition < sourceCode.length()) {
+            char c = sourceCode.charAt(sourcePosition);
+            char next = (sourcePosition + 1 < sourceCode.length()) ? sourceCode.charAt(sourcePosition + 1) : '\0';
+
+            if (!inString && !inComment && c == '/' && next == '*') {
+                inComment = true;
+                program.append(c).append(next);
+                sourcePosition += 2;
+                continue;
+            }
+
+            if (inComment) {
+                program.append(c);
+                sourcePosition++;
+                if (c == '*' && next == '/') {
+                    program.append(next);
+                    sourcePosition++;
+                    inComment = false;
+                }
+                continue;
+            }
+
+            if (c == '"') {
+                inString = !inString;
+            }
+
+            program.append(c);
+            sourcePosition++;
+
+            if (!inString && c == '$') {
+                break;
+            }
+        }
+
+        return program.toString();
+    }
+
+    // lex the next program only, leaving sourcePosition ready for the following call
+    public List<Token> runNextProgram(String sourceCode, boolean isVerbose) {
+        String programSource = extractNextProgram(sourceCode);
+        if (programSource.isEmpty()) {
+            resetRunState(isVerbose);
+            return tokens;
+        }
+        return run(programSource, isVerbose);
+    }
 
     // run returns the list of tokens, and takes in the source code and the
     // condition of verbose mode
     public List<Token> run(String sourceCode, boolean isVerbose) {
-        this.verbose = isVerbose;
+        resetRunState(isVerbose);
         /*
          * representation of state:
          * BEGIN, IDENTIFIER, NUMBER, STRING, COMMENT, EQUAL, NOT_EQUAL,
@@ -769,7 +848,7 @@ public class Lex {
     private characterType getKeywordTokenType(String keywordType) {
         return switch (keywordType) {
             case "print" -> characterType.PRINT;
-            case "loop" -> characterType.LOOP;
+            case "while" -> characterType.WHILE;
             case "if" -> characterType.IF;
             case "Type" -> characterType.TYPE;
             case "BoolVal" -> characterType.BOOLVAL;

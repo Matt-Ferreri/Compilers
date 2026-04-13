@@ -38,5 +38,5 @@ $
 }
 $
 
-{intxx=0stringnn="hello"printxiftrue{/*abc*/}{booleanflagprintname}$
+{intxx=0stringnn="hello"printxiftrue{/*abc*/booleanfprintn}$
 

@@ -10,65 +10,70 @@ public class main {
         // wanted
         final boolean isLexerVerbose = false;
         final boolean isParserVerbose = false;
-        final boolean isSemanticAnalyzerVerbose = false;
+        final boolean isSemanticAnalyzerVerbose = true;
 
-        // perform lexical analysis on the source code
+        // create one lexer and let it keep track of where the next program starts
         Lex lex = new Lex();
+        boolean compilationHadErrors = false;
 
-        System.out.println("Starting lexing...");
+        // compile one program at a time: lex -> parse -> semantic analysis
+        for (int programNumber = 1; lex.hasMorePrograms(sourceCode); programNumber++) {
+            System.out.println("Compiling program " + programNumber + "...");
 
-        // go to lex.run with the source code and the condition of verbose mode
-        // lex.run returns the list of tokens, so assign it to the tokens variable
-        List<Token> tokens = lex.run(sourceCode, isLexerVerbose);
+            System.out.println("Starting lexing...");
+            // lex only the next program up to its EOP and keep the rest for later
+            List<Token> tokens = lex.runNextProgram(sourceCode, isLexerVerbose);
+            lex.getWarnings();
 
-        // print how many warnings there were and what they are
-        lex.getWarnings();
+            if (lex.lexErrors()) {
+                System.out.println("Lexing failed for program " + programNumber + ", moving to next...");
+                compilationHadErrors = true;
+                continue;
+            } else {
+                System.out.println("No errors moving on to parse...");
+                System.out.println();
+            }
 
-        // if there were any lexing errors, print a message and stop the program,
-        // otherwise print a success message
-        if (lex.lexErrors()) {
-            System.out.println("Lexing failed stopping...");
-            return;
+            Parser parse = new Parser();
+            System.out.println("Starting Parse...");
+            // parse just the current program's token stream
+            Tree cst = parse.run(tokens, isParserVerbose);
+
+            if (parse.parseErrors()) {
+                System.out.println("Parsing failed for program " + programNumber + ", moving to next...");
+                compilationHadErrors = true;
+                continue;
+            }
+
+            System.out.println("No errors moving on to semantic analysis...");
+            System.out.println();
+
+            SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
+            System.out.println("Starting Semantic Analysis...");
+            // semantic analysis reduces the CST into an AST and checks scopes/types
+            semanticAnalyzer.run(tokens, cst);
+
+            if (semanticAnalyzer.semanticErrors()) {
+                System.out.println("Semantic Analysis failed for program " + programNumber + ", moving to next...");
+                compilationHadErrors = true;
+                continue;
+            }
+            else {
+                if (isSemanticAnalyzerVerbose) {
+                    semanticAnalyzer.printAST();
+                    semanticAnalyzer.printSymbolTable();
+                }
+            }
+
+            System.out.println("No errors moving on to code generation...");
+            System.out.println();
+        }
+
+        if (compilationHadErrors) {
+            System.out.println("Compilation finished with errors.");
         } else {
-            System.out.println("No errors moving on to parse...");
+            System.out.println("Compilation finished successfully.");
         }
-        // move on to parse
-
-        // create new parser instance
-        Parser parse = new Parser();
-        System.out.println("Starting Parse...");
-
-        // perform parse using the tokens list and the boolean verbose to control output
-        // set it equal to tree so that the CST can be printed out
-        List<Tree> tree = parse.run(tokens, isParserVerbose);
-
-        // if there were any parse errors, print a message and stop the program,
-        // otherwise print a success message
-        if (parse.parseErrors()) {
-            System.out.println("Parsing failed stopping...");
-            return;
-        }
-        // if we make it here, then there were no parse errors
-        // System.out.print(tree);
-        System.out.println("No errors moving on to semantic analysis...");
-
-        // move on to semantic analysis
-
-        // create new semantic analyzer instance
-        SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
-        System.out.println("Starting Semantic Analysis...");
-        // semantic analysis is a tree of hash tables
-
-        // perform semantic analysis using the tree of hash tables
-        semanticAnalyzer.run(tokens, isSemanticAnalyzerVerbose);
-        // if there were any semantic errors, print a message and stop the program,
-        // otherwise print a success message
-        if (semanticAnalyzer.semanticErrors()) {
-            System.out.println("Semantic Analysis failed stopping...");
-            return;
-        }
-        // if we make it here, then there were no semantic errors, so we perform code gen
-        System.out.println("No errors moving on to code generation...");
     }
 
 }

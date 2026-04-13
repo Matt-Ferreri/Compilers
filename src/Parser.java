@@ -1,39 +1,29 @@
-import java.util.ArrayList;
 import java.util.List;
 
 public class Parser {
 
-    // Thrown by goToNextProgram to use in catch block for error recovery
+    // thrown to stop parsing the current program as soon as an error is found
     private static class ParseErrorException extends RuntimeException {}
 
     // list of tokens and the current position in the token stream
     private List<Token> tokens;
     private int current;
-    int currentProgram = 1;
-
     // start with no errors or warnings
     boolean hasErrors = false;
     boolean hasWarnings = false;
     int warnings = 0;
 
-    // if we get an error, set this to true a new program is reached
+    // if we get an error, set this so we only report it once for this program
     private boolean currentProgramHasErrors = false;
 
     private boolean verbose;
 
     // create a new tree
     Tree tree = new Tree();
-    // create list of trees
-    List<Tree> trees = new ArrayList<>();
-
-
     // takes message in as a variable and and always prints message
     private void logError(String message) {
         System.out.println(message);
-        // inform the user that there was an error and we are not parsing current
-        // program any further
-        // move on to the next program if there are more programs to parse
-        System.out.println("Errors found! Stopping program " + currentProgram + " and moving on to next");
+        System.out.println("Errors found! Stopping current program.");
         return;
     }
 
@@ -43,42 +33,31 @@ public class Parser {
         return hasErrors;
     }
 
-    // runs the parser
-    public List<Tree> run(List<Token> tokens, boolean isVerbose) {
+    // runs the parser on one program's token list
+    public Tree run(List<Token> tokens, boolean isVerbose) {
         // set the verbose, tokens, and current position
         this.verbose = isVerbose;
         this.tokens = tokens;
         this.current = 0;
+        this.hasErrors = false;
+        this.currentProgramHasErrors = false;
+        this.tree = new Tree();
 
-        // start the parsing
+        // start the parse for just this program
         performParse();
 
         // return the cst
-        return trees;
+        return tree;
     }
 
     public void performParse() {
-        // perform recursive descent start at parseProgram 
-        // while the current index is less than the size of the tokens, parse the
-        // program, used if there are multiple programs in the file
-        while (current < tokens.size()) {
-            // reset tree and errors
-            tree = new Tree();
-            currentProgramHasErrors = false;
-            try {
-                // perform the parse, print the tree and end of program message, add to the list of tress, end increment program counter
-                parseProgram();
-                // if verbose mode is on print out the tree, do everything else no matter what
-                if(verbose){
+        try {
+            parseProgram();
+            if (verbose) {
                 System.out.print(tree);
-                System.out.print("End of program: " + currentProgram);
-                }
-                trees.add(tree);
-                currentProgram++;
-            } catch (ParseErrorException e) {
-                hasErrors = true;
-                currentProgram++;
             }
+        } catch (ParseErrorException e) {
+            hasErrors = true;
         }
     }
 
@@ -93,8 +72,7 @@ public class Parser {
                 hasErrors = true;
                 currentProgramHasErrors = true;
             }
-            goToNextProgram();
-            return;
+            throw new ParseErrorException();
         }
 
         // if the current token type is the expected type, consume the token and return
@@ -114,31 +92,16 @@ public class Parser {
         hasErrors = true;
         currentProgramHasErrors = true;
 
-        // call goToNextProgram to go to the next program
-        goToNextProgram();
+        throw new ParseErrorException();
     }
 
-    // if there is an error go to the end of the current program
-    // look for EOP token and consume it, then throw to get to the next program
+    // helper kept for older call sites - now it simply aborts the current parse
     private void goToNextProgram() {
-        // if the current index is greater than the size of the token stream, throw an error
-        if (current >= tokens.size()) {
-            throw new ParseErrorException();
-        }
-        // while the current index is less than the size of the token stream and the current token type is not EOP, increment the current index
-        while (current < tokens.size() && tokens.get(current).tokenType != Lex.characterType.EOP) {
-            current++;
-        }
-        // if the current index is less than the size of the token stream, consume the EOP token
-        if (current < tokens.size()) {
-            current++;  // consume EOP
-        }
-        throw new ParseErrorException();  // unwind so performParse can parse the next program
+        throw new ParseErrorException();
     }
 
     // a program is a Block + $
     private void parseProgram() {
-        currentProgramHasErrors = false;  // new program, so we have no errors
         // add the program to the CST
         tree.addNode("Program", "branch");
 
@@ -177,7 +140,7 @@ public class Parser {
         // if the next character is the statement, recursively call statement followed
         // by statement list, if not, do nothing
         if (currentToken == Lex.characterType.PRINT || currentToken == Lex.characterType.IF ||
-                currentToken == Lex.characterType.LOOP || currentToken == Lex.characterType.TYPE ||
+                currentToken == Lex.characterType.WHILE || currentToken == Lex.characterType.TYPE ||
                 currentToken == Lex.characterType.ID || currentToken == Lex.characterType.LBRACE) {
             parseStatement();
             parseStatementList();
@@ -229,7 +192,7 @@ public class Parser {
 
         // if its of type loop, go to parseWhileStatement because it is the start of a
         // loop
-        else if (currentToken == Lex.characterType.LOOP) {
+        else if (currentToken == Lex.characterType.WHILE) {
             parseWhileStatement();
         }
 
@@ -303,7 +266,7 @@ public class Parser {
         tree.addNode("WhileStatement", "branch");
 
         // first match the word while, which is labeled loop
-        match(Lex.characterType.LOOP);
+        match(Lex.characterType.WHILE);
         // next check for a BooleanExpr
         parseBooleanExpr();
         // ends with a Block
