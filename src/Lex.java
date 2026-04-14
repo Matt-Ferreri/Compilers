@@ -38,6 +38,7 @@ public class Lex {
     // start with no errors or warnings
     int warnings = 0;
     int errors = 0;
+    int currentLine;
 
     // build state transition table, where the rows are the current state and the
     // columns are the character type, and the values are the next state
@@ -146,18 +147,18 @@ public class Lex {
     }
 
     // lex the next program only, leaving sourcePosition ready for the following call
-    public List<Token> runNextProgram(String sourceCode, boolean isVerbose) {
+    public List<Token> runNextProgram(String sourceCode, boolean isVerbose, int lineNum) {
         String programSource = extractNextProgram(sourceCode);
         if (programSource.isEmpty()) {
             resetRunState(isVerbose);
             return tokens;
         }
-        return run(programSource, isVerbose);
+        return run(programSource, isVerbose, lineNum);
     }
 
     // run returns the list of tokens, and takes in the source code and the
     // condition of verbose mode
-    public List<Token> run(String sourceCode, boolean isVerbose) {
+    public List<Token> run(String sourceCode, boolean isVerbose, int lineNum) {
         resetRunState(isVerbose);
         /*
          * representation of state:
@@ -476,7 +477,7 @@ public class Lex {
         transitionTable[state.DONE.ordinal()][characterType.OTHER.ordinal()] = state.BEGIN;
 
         // start at line 1, index 0, and program 1
-        int currentLine = 1;
+        currentLine = lineNum;
         int lastIndex = 0;
         int programNum = 1;
 
@@ -908,4 +909,7 @@ public class Lex {
         }
     }
 
+    public int getCurrentLine() {
+        return currentLine;
+    }
 }
