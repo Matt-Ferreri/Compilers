@@ -1,24 +1,27 @@
 import java.util.List;
 
-
 public class main {
     public static void main(String[] args) throws Exception {
         // read the source code from a file
-        String sourceCode = InputReader.ReadAll("C:/Users/ma8fe/compile/src/program.txt");
+        String sourceCode = InputReader.ReadAll("C:/Users/ma8fe/compile/Programs/invalidTestCodeGen.txt");
 
         // verbose mode that can be toggled on and off depending on how much output is
         // wanted
         final boolean isLexerVerbose = true;
-        final boolean isParserVerbose = false;
-        final boolean isSemanticAnalyzerVerbose = false;
+        final boolean isParserVerbose = true;
+        final boolean isSemanticAnalyzerVerbose = true;
+        final boolean isCodeGeneratorVerbose = true;
 
         // create one lexer and let it keep track of where the next program starts
         Lex lex = new Lex();
         boolean compilationHadErrors = false;
         int lineNum = 1; // keep track of line numbers across programs for better error messages
 
-        // compile one program at a time: lex -> parse -> semantic analysis
+        // compile one program at a time: lex -> parse -> semantic analysis - > code
+        // generation
         for (int programNumber = 1; lex.hasMorePrograms(sourceCode); programNumber++) {
+            // all programs start with no errors
+            compilationHadErrors = false;
             System.out.println("Compiling program " + programNumber + "...");
 
             System.out.println("Starting lexing...");
@@ -39,7 +42,7 @@ public class main {
             Parser parse = new Parser();
             System.out.println("Starting Parse...");
             // parse just the current program's token stream
-            Tree cst = parse.run(tokens, isParserVerbose);
+            Tree cst = parse.run(tokens, isParserVerbose, compilationHadErrors);
 
             if (parse.parseErrors()) {
                 System.out.println("Parsing failed for program " + programNumber + ", moving to next...");
@@ -53,22 +56,37 @@ public class main {
             SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
             System.out.println("Starting Semantic Analysis...");
             // semantic analysis reduces the CST into an AST and checks scopes/types
-            semanticAnalyzer.run(tokens, cst);
+            Tree ast = semanticAnalyzer.run(tokens, cst);
 
+            // if there are semantic errors, move on to the next program, otherwise print
+            // the AST and symbol table if in verbose mode
             if (semanticAnalyzer.semanticErrors()) {
                 System.out.println("Semantic Analysis failed for program " + programNumber + ", moving to next...");
                 compilationHadErrors = true;
                 continue;
             }
-            else {
-                if (isSemanticAnalyzerVerbose) {
-                    semanticAnalyzer.printAST();
-                    semanticAnalyzer.printSymbolTable();
-                }
+            else if (isSemanticAnalyzerVerbose && !compilationHadErrors) {
+                semanticAnalyzer.printAST();
+                semanticAnalyzer.printAndReturnSymbolTable();
             }
 
             System.out.println("No errors moving on to code generation...");
             System.out.println();
+
+            // code generation takes the AST and symbol table and generates code
+            CodeGen codeGenerator = new CodeGen();
+            codeGenerator.run(ast, semanticAnalyzer, isCodeGeneratorVerbose);
+
+            // if verbose mode is on print the code generation in hex
+            if (isCodeGeneratorVerbose && !compilationHadErrors) {
+                codeGenerator.printCodeGrid();
+            }
+            // code gen shouldn't have errors, but just in case to fail gracefully
+            // only error is if the stack/heap overlap
+            if (codeGenerator.hasErrors()) {
+                compilationHadErrors = true;
+            }
+
         }
 
         if (compilationHadErrors) {

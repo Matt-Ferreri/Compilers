@@ -12,6 +12,7 @@ public class Parser {
     boolean hasErrors = false;
     boolean hasWarnings = false;
     int warnings = 0;
+    boolean programHasErrors;
 
     // if we get an error, set this so we only report it once for this program
     private boolean currentProgramHasErrors = false;
@@ -34,7 +35,7 @@ public class Parser {
     }
 
     // runs the parser on one program's token list
-    public Tree run(List<Token> tokens, boolean isVerbose) {
+    public Tree run(List<Token> tokens, boolean isVerbose, boolean compilationHadErrors) {
         // set the verbose, tokens, and current position
         this.verbose = isVerbose;
         this.tokens = tokens;
@@ -42,7 +43,8 @@ public class Parser {
         this.hasErrors = false;
         this.currentProgramHasErrors = false;
         this.tree = new Tree();
-
+        programHasErrors = compilationHadErrors;
+  
         // start the parse for just this program
         performParse();
 
@@ -53,7 +55,7 @@ public class Parser {
     public void performParse() {
         try {
             parseProgram();
-            if (verbose) {
+            if (verbose && !programHasErrors) {
                 System.out.print(tree);
             }
         } catch (ParseErrorException e) {

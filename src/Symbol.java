@@ -7,7 +7,8 @@ public class Symbol {
     public String type;
     public boolean isInitialized;
     public boolean isUsed;
-    
+    // Byte address for load/store 
+    public int address = -1;
 
     public Symbol(String type, boolean isInitialized, boolean isUsed) {
         this.type = type;

@@ -1,0 +1,122 @@
+{
+  int x
+  x = true
+}$
+{
+  int n
+  n = "n"
+}$
+{
+  string s
+  s = 0
+}$
+{
+  string s
+  s = false
+}$
+{
+  boolean b
+  b = 0
+}$
+{
+  boolean b
+  b = "true"
+}$
+{
+  string a
+  string b
+  b = "z"
+  a = b
+}$
+{
+  int a
+  int b
+  b = 2
+  a = b
+}$
+{
+  print(w)
+}$
+{
+  int x
+  print(x)
+}$
+{
+  if (1 == true) {
+    int k
+    k = 0
+    print(k)
+  }
+}$
+{
+  int a
+  boolean c
+  a = 0
+  c = true
+  if (a == c) {
+    print(c)
+  }
+}$
+{
+  string u
+  u = "a"
+  if (u == 1) {
+    int z
+    z = 0
+    print(z)
+  }
+}$
+{
+  if (g == 1) {
+    int q
+    q = 0
+    print(q)
+  }
+}$
+{
+  while (1 == false) {
+    int r
+    r = 0
+    print(r)
+  }
+}$
+{
+  string s
+  s = "x"
+  if (s == true) {
+    int v
+    v = 0
+    print(v)
+  }
+}$
+{
+  int x
+  x = 0
+  while (x == true) {
+    print(x)
+  }
+}$
+{
+  boolean f
+  f = false
+  if (f == 3) {
+    int p
+    p = 0
+    print(p)
+  }
+}$
+{
+  int x
+  x = 1
+  if (x == 2) {
+    string d
+    d = 9
+  }
+}$
+{
+  int y
+  y = 1
+  if (y != true) {
+    print(y)
+  }
+}$

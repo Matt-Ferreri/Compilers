@@ -781,6 +781,11 @@ public class Lex {
             }
             currentState = nextState;
         }
+        //check the state: if we are in a comment state, end the comment and print a warning that the comment was not closed
+        if (currentState == state.COMMENT|| currentState == state.END_COMMENT_CHECK) {
+            warnings++;
+            logWarning("LEXER: Warning: Comment not closed at end of file, ending comment at end of file");
+        }
 
         // check to see what last token is, if it is not an EOP, give a warning that it may be forgotten
         if (tokens.get(tokens.size() - 1).tokenType != characterType.EOP) {
@@ -788,7 +793,8 @@ public class Lex {
             logWarning("LEXER: Warning: May have forgotten EOP, adding one to the list of tokens");
             tokens.add(new Token(characterType.EOP, "$", currentLine, lastIndex - token.length()));
         }
-
+    
+    
         // return the list of tokens
         return tokens;
     }

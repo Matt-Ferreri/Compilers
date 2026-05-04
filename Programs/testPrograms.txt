@@ -1,3 +1,4 @@
+used for lexer
 {
   int a = 1
   int b = 2
@@ -39,4 +40,15 @@ $
 $
 
 {intxx=0stringnn="hello"printxiftrue{/*abc*/booleanfprintn}$
+
+
+
+{
+  int x
+  x = 3
+  print(x)
+  string p 
+  p = "john"
+  print(p)
+}$
 

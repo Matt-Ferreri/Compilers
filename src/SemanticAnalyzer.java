@@ -1,12 +1,11 @@
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Hashtable;
 
+
 public class SemanticAnalyzer {
-
-    // if we get an error, set this to true a new program is reached
-    private boolean currentProgramHasErrors = false;
-
-    private boolean verbose;
+    
     public boolean hasErrors = false;
 
     int currentScope = 0; // start at global scope, will move with brackets
@@ -24,6 +23,15 @@ public class SemanticAnalyzer {
     private List<Token> tokens; 
     private Tree cst;
 
+    /** Symbol tables per scope (string keys "0", "1", …) — used by CodeGen for address binding. */
+    public Hashtable<String, Hashtable<String, Symbol>> getScopes() {
+        return scopes;
+    }
+
+    public Hashtable<Integer, Integer> getParentScope() {
+        return parentScope;
+    }
+
     // if there is an error return true
     public boolean semanticErrors() {
         // if we have any errors, return true
@@ -33,7 +41,7 @@ public class SemanticAnalyzer {
         return false;
     }
 
-    public void run(List<Token> tokens, Tree cst) {
+    public Tree run(List<Token> tokens, Tree cst) {
         this.tokens = tokens;
         this.currentScope = 0;
         this.hasErrors = false;
@@ -46,7 +54,7 @@ public class SemanticAnalyzer {
         AST = new Tree();
         createASTFromCST();
         checkScopeAndTypes(tokens);
-        return;
+        return AST;
     }
 
     public void printAST() {
@@ -55,19 +63,23 @@ public class SemanticAnalyzer {
         System.out.println("---------------------------\n");
     }
 
-    public void printSymbolTable() {
+    public Tree printAndReturnSymbolTable() {
         System.out.println("\n--- Symbol Table ---");
         for (String scopeKey : scopes.keySet()) {
             System.out.println("Scope " + scopeKey + ":");
             Hashtable<String, Symbol> scopeTable = scopes.get(scopeKey);
-            for (String varName : scopeTable.keySet()) {
+            List<String> names = new ArrayList<>(scopeTable.keySet());
+            Collections.sort(names);
+            for (String varName : names) {
                 Symbol sym = scopeTable.get(varName);
                 System.out.println("  " + varName + " | type: " + sym.type
+                        + " | addr: " + sym.address
                         + " | initialized: " + sym.isInitialized
                         + " | used: " + sym.isUsed);
             }
         }
         System.out.println("--------------------");
+        return symbolTable;
     }
 
     public void createASTFromCST() {
@@ -92,6 +104,9 @@ public class SemanticAnalyzer {
             case "WhileStatement" -> reduceWhileStatement(node);
             case "IfStatement" -> reduceIfStatement(node);
             case "Expr" -> reduceExpr(node);
+            case "IntExpr" -> reduceIntExpr(node);
+            case "StringExpr" -> reduceStringExpr(node);
+            case "BooleanExpr" -> reduceBooleanExpr(node);
             case "ID" -> AST.addNode(extractLeafValue(node), "leaf");
             default -> {
                 if (node.children != null) {
@@ -196,7 +211,9 @@ public class SemanticAnalyzer {
     private void reduceWhileStatement(Tree.Node node) {
         AST.addNode("WhileStatement", "branch");
         for (Tree.Node child : node.children) {
-             if ("Block".equals(child.name)) {
+            if ("BooleanExpr".equals(child.name)) {
+                reduceBooleanExpr(child);
+            } else if ("Block".equals(child.name)) {
                 reduceBlock(child);
             }
         }
@@ -209,11 +226,12 @@ public class SemanticAnalyzer {
     private void reduceIfStatement(Tree.Node node) {
         AST.addNode("IfStatement", "branch");
         for (Tree.Node child : node.children) {
-        if ("Block".equals(child.name)) {
+            if ("BooleanExpr".equals(child.name)) {
+                reduceBooleanExpr(child);
+            } else if ("Block".equals(child.name)) {
                 reduceBlock(child);
             }
         }
-        // move back up the AST once we are done with the children
         AST.endChildren();
     }
 
@@ -221,13 +239,59 @@ public class SemanticAnalyzer {
     // add to AST
     private void reduceExpr(Tree.Node node) {
         for (Tree.Node child : node.children) {
-            if ("ID".equals(child.name)) {
-                // only add the ID to the AST as a leaf node
+            if ("IntExpr".equals(child.name)) {
+                reduceIntExpr(child);
+            } else if ("StringExpr".equals(child.name)) {
+                reduceStringExpr(child);
+            } else if ("BooleanExpr".equals(child.name)) {
+                reduceBooleanExpr(child);
+            } else if ("ID".equals(child.name)) {
                 AST.addNode(extractLeafValue(child), "leaf");
             }
         }
     }
 
+    private void reduceIntExpr(Tree.Node node) {
+        AST.addNode("IntExpr", "branch");
+        for (Tree.Node child : node.children) {
+            if ("Expr".equals(child.name)) {
+                reduceExpr(child);
+            } else if (isLeaf(child)) {
+                AST.addNode(child.name, "leaf");
+            }
+        }
+        AST.endChildren();
+    }
+
+    private void reduceStringExpr(Tree.Node node) {
+        AST.addNode("StringExpr", "branch");
+        StringBuilder stringValue = new StringBuilder();
+        collectStringChars(node, stringValue);
+        AST.addNode(stringValue.toString(), "leaf");
+        AST.endChildren();
+    }
+
+    private void collectStringChars(Tree.Node node, StringBuilder builder) {
+        for (Tree.Node child : node.children) {
+            if ("CharList".equals(child.name)) {
+                collectStringChars(child, builder);
+            } else if (isLeaf(child) && !"\"".equals(child.name)) {
+                builder.append(child.name);
+            }
+        }
+    }
+
+    private void reduceBooleanExpr(Tree.Node node) {
+        AST.addNode("BooleanExpr", "branch");
+        for (Tree.Node child : node.children) {
+            if ("Expr".equals(child.name)) {
+                reduceExpr(child);
+            } else if (isLeaf(child) && !"(".equals(child.name) && !")".equals(child.name)) {
+                AST.addNode(child.name, "leaf");
+            }
+        }
+        AST.endChildren();
+    }
 
     private boolean isLeaf(Tree.Node node) {
         return node.children == null || node.children.isEmpty();
