@@ -28,6 +28,10 @@ public class Parser {
         return;
     }
 
+    private void logWarning(String message) {
+        System.out.println(message);
+    }
+
 
     // if there is an error return true
     public boolean parseErrors() {
@@ -42,6 +46,8 @@ public class Parser {
         this.current = 0;
         this.hasErrors = false;
         this.currentProgramHasErrors = false;
+        this.hasWarnings = false;
+        this.warnings = 0;
         this.tree = new Tree();
         programHasErrors = compilationHadErrors;
   
@@ -488,9 +494,18 @@ public class Parser {
 
     // in parseBoolOp, must be either == or !=
     private void parseBoolOp() {
-        // match the boolean operator
+        if (current < tokens.size()) {
+            Token t = tokens.get(current);
+            // Common mistake: '=' in a condition instead of '=='. Lexer emits EQUAL ("=").
+            if (t.tokenType == Lex.characterType.EQUAL && "=".equals(t.value)) {
+                warnings++;
+                hasWarnings = true;
+                logWarning("PARSER: Warning: '=' changed to '==' (equality) in condition at line "
+                        + t.line + ", column " + t.position);
+                tokens.set(current, new Token(Lex.characterType.BOOLOP, "==", t.line, t.position));
+            }
+        }
         match(Lex.characterType.BOOLOP);
-
     }
 
     // must be match true or false, so match a BOOLVAL
