@@ -510,7 +510,7 @@ public class Lex {
             if (nextState == state.DONE) {
                 // add current char to token when appropriate
                 if (currentState == state.BEGIN) {
-                    token += c;
+                    token += foldLexerChar(c, currentLine, lastIndex);
                 } else if ((currentState == state.EQUAL_CHECK || currentState == state.NOT_EQUAL_CHECK) && c == '=') {
                     token += c;
                 }
@@ -738,7 +738,7 @@ public class Lex {
                 // add to the token
                 if (currentState != state.COMMENT && currentState != state.BEGIN_COMMENT_CHECK
                         && currentState != state.END_COMMENT_CHECK) {
-                    token += c;
+                    token += foldLexerChar(c, currentLine, lastIndex);
                 }
                 // if theres a new line, update the line number and reset the index for the new
                 // line
@@ -771,7 +771,7 @@ public class Lex {
             // add char and update state so we can start building the token
             // don't add opening quote for strings, or / for comments
             if (nextState != state.BEGIN_COMMENT_CHECK && nextState != state.STRING) {
-                token += c;
+                token += foldLexerChar(c, currentLine, lastIndex);
             }
             if (c == '\n') {
                 currentLine++;
@@ -813,8 +813,26 @@ public class Lex {
         log(warnings + " warning(s) found.");
     }
 
+    /**
+     * The language allows only lowercase letters. Uppercase letters (including inside
+     * string literals) are folded to lowercase and a warning is logged.
+     */
+    private char foldLexerChar(char c, int line, int col) {
+        if (Character.isUpperCase(c) && Character.isLetter(c)) {
+            char lowered = Character.toLowerCase(c);
+            warnings++;
+            logWarning("LEXER: Warning: Uppercase letter '" + c + "' converted to lowercase '" + lowered
+                    + "' at line " + line + ", col " + col);
+            return lowered;
+        }
+        return c;
+    }
+
     public Lex.characterType getCharacterType(char c) {
         if (Character.isLowerCase(c)) {
+            return characterType.ID;
+        }
+        if (Character.isUpperCase(c) && Character.isLetter(c)) {
             return characterType.ID;
         } else if (Character.isDigit(c)) {
             return characterType.DIGIT;
