@@ -3,7 +3,7 @@ import java.util.List;
 public class main {
     public static void main(String[] args) throws Exception {
         // read the source code from a file
-        String sourceCode = InputReader.ReadAll("C:/Users/ma8fe/compile/Programs/invalidTestCodeGen.txt");
+        String sourceCode = InputReader.ReadAll("C:/Users/ma8fe/compile/Programs/program.txt");
 
         // verbose mode that can be toggled on and off depending on how much output is
         // wanted
@@ -75,7 +75,7 @@ public class main {
 
             // code generation takes the AST and symbol table and generates code
             CodeGen codeGenerator = new CodeGen();
-            codeGenerator.run(ast, semanticAnalyzer, isCodeGeneratorVerbose);
+            codeGenerator.run(ast, semanticAnalyzer);
 
             // if verbose mode is on print the code generation in hex
             if (isCodeGeneratorVerbose && !compilationHadErrors) {

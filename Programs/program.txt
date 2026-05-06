@@ -36,16 +36,16 @@
 }$
 {
   if (false) {
-    int dead
-    dead = 0
-    print(dead)
+    int m
+    m = 0
+    print(m)
   }
 }$
 {
   if (true) {
-    int live
-    live = 7
-    print(live)
+    int l
+    l = 7
+    print(l)
   }
 }$
 {
@@ -75,9 +75,9 @@
   }
 }$
 {
-  string msg
-  msg = "a"
-  print(msg)
+  string h
+  h = "a"
+  print(h)
 }$
 {
   int x
@@ -140,7 +140,7 @@
   }
 }$
 {
-  string longish
-  longish = "hello"
-  print(longish)
+  string w
+  w = "hello"
+  print(w)
 }$

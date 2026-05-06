@@ -46,8 +46,6 @@ public class CodeGen {
     private final byte[] memory = new byte[MEM_SIZE];
     // semantic analyzer for scopes
     private SemanticAnalyzer ctx;
-    // verbose mode for the code generator
-    private boolean verbose;
     // pointer to where the next byte will be written
     private int codePtr;
     // lowest address used by heap; heap occupies [heapBottom .. MEM_SIZE-1]
@@ -99,9 +97,8 @@ public class CodeGen {
         }
     }
 
-    public void run(Tree ast, SemanticAnalyzer semantic, boolean verbose) {
+    public void run(Tree ast, SemanticAnalyzer semantic) {
         this.ctx = semantic; // creating new semantic analyzer
-        this.verbose = verbose; // setting verbose mode
         Arrays.fill(memory, (byte) 0); // filling the memory with 0s
         errors.clear(); // clearing the list of errors
         codePtr = 0; // setting the code pointer to 0
@@ -118,17 +115,10 @@ public class CodeGen {
         if (ast != null && ast.getRoot() != null) {
             genNode(ast.getRoot()); // ge the node from the AST
         }
-        emitOp("BRK", BRK); // emit the BRK opcode at the end of the code
+        emitOp(BRK); // emit the BRK opcode at the end of the code
 
         applyRelativePatches(); // apply the relative branch patches
         finalizeStackHeapLayout(); // finalize the stack and heap layout
-
-        // if verbose mode is on, print the code generation
-        if (verbose) {
-            System.out.println("CODEGEN: code bytes [0.." + (layoutCodeLen - 1) + "], stack [$"
-                    + String.format("%02X", layoutStackBase) + "..), heap [$"
-                    + String.format("%02X", layoutHeapBottom) + "..FF]");
-        }
     }
 
     // reset the addresses of the symbols to -1 to indicate that the address is not set yet
@@ -230,8 +220,8 @@ public class CodeGen {
         return codePtr;
     }
 
-    // emits an opcode and the bytes to the memory
-    private void emitOp(String mnemonic, int... bytes) {
+    // emits opcode bytes to the code segment in memory 
+    private void emitOp(int... bytes) {
         // if the heap is full, report an error
         if (codePtr + bytes.length > MEM_SIZE) {
             reportError("code overflow past end of memory");
@@ -242,32 +232,20 @@ public class CodeGen {
             reportError("code ran into heap");
             return;
         }
-        // if verbose mode is on, print the opcode and the bytes in hex
-        if (verbose) {
-            StringBuilder line = new StringBuilder("  ");
-            line.append(mnemonic).append('\t');
-            for (int i = 0; i < bytes.length; i++) {
-                if (i > 0) {
-                    line.append(' ');
-                }
-                line.append(String.format("%02X", bytes[i] & 0xFF));
-            }
-            System.out.println(line);
-        }
         for (int b : bytes) {
             memory[codePtr++] = (byte) (b & 0xFF);
         }
     }
 
     /** Absolute addressing to a variable — operand patched after stack placement. */
-    private void emitAbsSym(String mnemonic, int opcode, Symbol sym) {
-        emitOp(mnemonic + " [sym]", opcode, 0, 0);
+    private void emitAbsSym(int opcode, Symbol sym) {
+        emitOp(opcode, 0, 0);
         absSymPatches.add(new AbsSymPatch(codePtr - 2, sym));
     }
 
     /** Absolute addressing for codegen scratch (one byte after stack vars). */
-    private void emitAbsScratch(String mnemonic, int opcode) {
-        emitOp(mnemonic + " [scratch]", opcode, 0, 0);
+    private void emitAbsScratch(int opcode) {
+        emitOp(opcode, 0, 0);
         absScratchOperandOffsets.add(codePtr - 2);
     }
 
@@ -383,7 +361,7 @@ public class CodeGen {
             // generate code to assign the value of the right hand side to the left hand side
             genIntExprValueInA(rhs);
             // emit the opcode to store the value in the variable
-            emitAbsSym("STA abs", STA_ABS, dest);
+            emitAbsSym(STA_ABS, dest);
         } else if ("string".equals(dest.type)) {
             // if the variable is a string, generate code to assign the value of the right hand side to the left hand side
             String lit = stringExprLiteral(rhs);
@@ -391,8 +369,8 @@ public class CodeGen {
                 // allocate a string to the heap and get the pointer to it
                 int ptr = heapAllocString(lit);
                 // emit the opcode to load the pointer into the accumulator
-                emitOp("LDA #heapPtr", LDA_IMM, ptr & 0xFF);
-                emitAbsSym("STA abs (string ref)", STA_ABS, dest);
+                emitOp(LDA_IMM, ptr & 0xFF);
+                emitAbsSym(STA_ABS, dest);
             } else {
                 // if the right hand side is not a string literal, find the ID of the variable in the subtree
                 String other = findIdInSubtree(rhs);
@@ -401,9 +379,9 @@ public class CodeGen {
                     Symbol src = lookup(other);
                     // if the variable is found, generate code to assign the value of the right hand side to the left hand side
                     if (src != null) {
-                        emitAbsSym("LDA abs (copy ref)", LDA_ABS, src);
+                        emitAbsSym(LDA_ABS, src);
                         // emit the opcode to store the value in the variable
-                        emitAbsSym("STA abs", STA_ABS, dest);
+                        emitAbsSym(STA_ABS, dest);
                     }
                 }
             }
@@ -411,9 +389,9 @@ public class CodeGen {
         } else if ("boolean".equals(dest.type)) {
             Boolean b = booleanLiteral(rhs);
             // emit the opcode to load the value into the accumulator
-            emitOp("LDA #bool", LDA_IMM, b ? 1 : 0);
+            emitOp(LDA_IMM, b ? 1 : 0);
             // emit the opcode to store the value in the variable
-            emitAbsSym("STA abs", STA_ABS, dest);
+            emitAbsSym(STA_ABS, dest);
         }
     }
 
@@ -430,11 +408,11 @@ public class CodeGen {
         // if the symbol is not null, generate code to print the value of the expression
         if (sym != null) {
             if ("int".equals(sym.type) || "boolean".equals(sym.type)) {
-                emitAbsSym("LDY abs", LDY_ABS, sym);
-                emitOp("LDX #01 SYS", LDX_IMM, 0x01, SYS);
+                emitAbsSym(LDY_ABS, sym);
+                emitOp(LDX_IMM, 0x01, SYS);
             } else if ("string".equals(sym.type)) {
-                emitAbsSym("LDY abs (ref)", LDY_ABS, sym);
-                emitOp("LDX #02 SYS", LDX_IMM, 0x02, SYS);
+                emitAbsSym(LDY_ABS, sym);
+                emitOp(LDX_IMM, 0x02, SYS);
             }
             return;
         }
@@ -442,9 +420,9 @@ public class CodeGen {
         if ("IntExpr".equals(arg.name)) {
             genIntExprValueInA(arg);
             // no TAY in ISA: stage A in scratch, then LDY abs (course table)
-            emitAbsScratch("STA scratch", STA_ABS);
-            emitAbsScratch("LDY abs (from scratch)", LDY_ABS);
-            emitOp("LDX #01 SYS", LDX_IMM, 0x01, SYS);
+            emitAbsScratch(STA_ABS);
+            emitAbsScratch(LDY_ABS);
+            emitOp(LDX_IMM, 0x01, SYS);
             return;
         }
         // if the argument is a string expression, generate code to print the value of the expression
@@ -452,8 +430,8 @@ public class CodeGen {
             String lit = stringExprLiteral(arg);
             if (lit != null) {
                 int ptr = heapAllocString(lit);
-                emitOp("LDY #heapPtr", LDY_IMM, ptr & 0xFF);
-                emitOp("LDX #02 SYS", LDX_IMM, 0x02, SYS);
+                emitOp(LDY_IMM, ptr & 0xFF);
+                emitOp(LDX_IMM, 0x02, SYS);
                 return;
             }
         }
@@ -498,6 +476,11 @@ public class CodeGen {
     }
 
     /**
+     * // cursor generated this comments after incorrectly doing if and while statements
+     * // the way it was done before was that it checked the condition to see if it was true or false
+     * // and then it would generate the code for the body if it was true and wouldn't generate code for false
+     * // it needs to be branching depeneding on the condition
+     * 
      * If-statement codegen.
      * <ul>
      *   <li>{@code if (false)} — no code (body never runs).</li>
@@ -569,8 +552,8 @@ public class CodeGen {
      * {@code LDA #$01} leaves A non-zero (Z=0), so {@code BNE} always takes the branch.
      */
     private void emitUnconditionalBneTo(int targetPc) {
-        emitOp("LDA #1 (then BNE always)", LDA_IMM, 1);
-        emitOp("BNE rel", BNE, 0);
+        emitOp(LDA_IMM, 1);
+        emitOp(BNE, 0);
         relPatches.add(new RelPatch(pc() - 1, targetPc));
     }
 
@@ -593,7 +576,7 @@ public class CodeGen {
     private void genThenAfterCpx(boolean equalityMeansThen, Tree.Node body, Integer loopHeadPc) {
         if (equalityMeansThen) {
             // == : want body when equal (Z=1). BNE runs when Z=0 → skip body when condition is false.
-            emitOp("BNE past-then (== cond false)", BNE, 0);
+            emitOp(BNE, 0);
             int brPast = pc() - 1;
             genNode(body);
             // while only: loop back to the start of the compare sequence.
@@ -604,10 +587,10 @@ public class CodeGen {
             relPatches.add(new RelPatch(brPast, pc()));
         } else {
             // != : want body when not equal (Z=0). BNE branches into body; if equal, skip body via 2nd BNE.
-            emitOp("BNE then-body (!= cond true)", BNE, 0);
+            emitOp(BNE, 0);
             int brIntoThen = pc() - 1;
-            emitOp("LDA #1", LDA_IMM, 1);
-            emitOp("BNE past-then (!= cond false)", BNE, 0);
+            emitOp(LDA_IMM, 1);
+            emitOp(BNE, 0);
             int brPastEqual = pc() - 1;
             int thenStart = pc();
             genNode(body);
@@ -716,17 +699,17 @@ public class CodeGen {
 
         // Both compile-time constants: LDX rhs, scratch lhs, CPX.
         if (lhsLit != null && rhsLit != null) {
-            emitOp("LDX #", LDX_IMM, rhsLit & 0xFF);
-            emitOp("LDA #", LDA_IMM, lhsLit & 0xFF);
-            emitAbsScratch("STA scratch", STA_ABS);
-            emitAbsScratch("CPX scratch", CPX_ABS);
+            emitOp(LDX_IMM, rhsLit & 0xFF);
+            emitOp(LDA_IMM, lhsLit & 0xFF);
+            emitAbsScratch(STA_ABS);
+            emitAbsScratch(CPX_ABS);
             return true;
         }
 
         // Literal on left, variable on right: scratch holds lhs, X loads rhs from memory.
         if (lhsLit != null) {
-            emitOp("LDA #", LDA_IMM, lhsLit & 0xFF);
-            emitAbsScratch("STA scratch", STA_ABS);
+            emitOp(LDA_IMM, lhsLit & 0xFF);
+            emitAbsScratch(STA_ABS);
             if (rhsId == null) {
                 reportError("CPX: bad rhs");
                 return false;
@@ -735,8 +718,8 @@ public class CodeGen {
             if (r == null) {
                 return false;
             }
-            emitAbsSym("LDX abs", LDX_ABS, r);
-            emitAbsScratch("CPX scratch", CPX_ABS);
+            emitAbsSym(LDX_ABS, r);
+            emitAbsScratch(CPX_ABS);
             return true;
         }
         // Variable on left: LDX lhs; rhs is literal (scratch) or another variable (scratch from LDA rhs).
@@ -745,11 +728,11 @@ public class CodeGen {
             if (l == null) {
                 return false;
             }
-            emitAbsSym("LDX abs", LDX_ABS, l);
+            emitAbsSym(LDX_ABS, l);
             if (rhsLit != null) {
-                emitOp("LDA #", LDA_IMM, rhsLit & 0xFF);
-                emitAbsScratch("STA scratch", STA_ABS);
-                emitAbsScratch("CPX scratch", CPX_ABS);
+                emitOp(LDA_IMM, rhsLit & 0xFF);
+                emitAbsScratch(STA_ABS);
+                emitAbsScratch(CPX_ABS);
                 return true;
             }
             if (rhsId != null) {
@@ -757,9 +740,9 @@ public class CodeGen {
                 if (r == null) {
                     return false;
                 }
-                emitAbsSym("LDA abs", LDA_ABS, r);
-                emitAbsScratch("STA scratch", STA_ABS);
-                emitAbsScratch("CPX scratch", CPX_ABS);
+                emitAbsSym(LDA_ABS, r);
+                emitAbsScratch(STA_ABS);
+                emitAbsScratch(CPX_ABS);
                 return true;
             }
         }
@@ -817,14 +800,14 @@ public class CodeGen {
         if (n.children == null || n.children.isEmpty()) {
             Integer v = parseDigitLexeme(n.name);
             if (v != null) {
-                emitOp("LDA #", LDA_IMM, v & 0xFF);
+                emitOp(LDA_IMM, v & 0xFF);
                 return;
             }
             String id = leafAsId(n);
             if (id != null) {
                 Symbol s = lookup(id);
                 if (s != null) {
-                    emitAbsSym("LDA abs", LDA_ABS, s);
+                    emitAbsSym(LDA_ABS, s);
                 }
                 return;
             }
@@ -841,10 +824,10 @@ public class CodeGen {
             }
             if (plus > 0) {
                 genIntExprValueInA(n.children.get(plus - 1));
-                emitAbsScratch("STA scratch", STA_ABS);
+                emitAbsScratch(STA_ABS);
                 genIntExprValueInA(n.children.get(plus + 1));
                 // course table has no CLC; VM carry state is assumed suitable for simple adds
-                emitAbsScratch("ADC scratch", ADC_ABS);
+                emitAbsScratch(ADC_ABS);
                 return;
             }
             for (Tree.Node c : n.children) {
@@ -964,11 +947,8 @@ public class CodeGen {
         }
     }
 
-    // prints the code grid in hex in a 16x16 grid
+    // prints memory as a 16×16 hex grid (code, stack, heap in one image)
     public void printCodeGrid() {
-        System.out.println("Memory: code [0.." + (layoutCodeLen > 0 ? layoutCodeLen - 1 : 0)
-                + "]  stack [$" + String.format("%02X", layoutStackBase) + "..]"
-                + "  heap [$" + String.format("%02X", layoutHeapBottom) + "..FF]  (else 00)");
         for (int row = 0; row < 16; row++) {
             for (int col = 0; col < 16; col++) {
                 int i = row * 16 + col;
