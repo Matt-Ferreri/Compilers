@@ -3,4 +3,11 @@
   STRING a
   a = "Hello world"
   print(a )
+  int b
+  b = 3
+  int C
+  c = 5
+  if (c=b){
+    
+  }
 }
