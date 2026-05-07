@@ -11,7 +11,7 @@ import java.util.Set;
 
 
 public class SemanticAnalyzer {
-    
+
     public boolean hasErrors = false;
 
     int currentScope = 0; // start at global scope, will move with brackets
