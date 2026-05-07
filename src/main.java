@@ -7,10 +7,10 @@ public class main {
 
         // verbose mode that can be toggled on and off depending on how much output is
         // wanted
-        final boolean isLexerVerbose = true;
-        final boolean isParserVerbose = true;
-        final boolean isSemanticAnalyzerVerbose = true;
-        final boolean isCodeGeneratorVerbose = true;
+        final boolean isLexerVerbose = false;
+        final boolean isParserVerbose = false;
+        final boolean isSemanticAnalyzerVerbose = false;
+        final boolean isCodeGeneratorVerbose = false;
 
         // create one lexer and let it keep track of where the next program starts
         Lex lex = new Lex();

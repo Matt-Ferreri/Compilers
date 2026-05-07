@@ -9,9 +9,18 @@ Cursor was used as a tool to assist with this codebase.
 - It did also help with semantic analysis a lot and the parser. The parser was mainly done by myself but some changes were made at the end by cursor. The semantic analysis was similar, but it did a lot more of that aspect as it helped with the symbol table a significant amount.
 - The lexer was also a combination, it helped with the different states, the DFA, and formatting in the token stream, but what was done in each state was done by me with some adjustments.
 -Cursor did most of part 2 of the projects other than the prompts. 
-    - adds EOP to end of program if missing. This was implemented the first time I did lex.
-    - implemented changing of uppercase to lowercase since uppercase letters aren't supported (doesn't change meaning, but prevent errors, does provide hints when it is done)
-    - in parse, when looking for a boolop, if there was only a single = (assignment op) as opposed to == it will change it to == and provide the warning message.
+    - in Lex 
+        - adds EOP to end of program if missing. This was implemented the first time I did lex.
+        - implemented changing of uppercase to lowercase since uppercase letters aren't supported (doesn't change meaning, but prevent errors, does provide hints when it is done)
+    - in parse: 
+        - when looking for a boolop, if there was only a single = (assignment op) as opposed to == it will change it to == and provide the warning message.
+    - in Semantic Analysis:
+        - constant folding: does computations and puts those in AST. For example if a variable is being set to 3 + 5, it will just set 8 in the AST or a bool expreession can be computed such as 3==4, it will set to false in the AST
+        - Constant propagation: records each variable’s compile-time value after assignments, with scope changes copy the map per scope so shadowing works, merges constants back to the map when leaving a block only for variables from origional scope, and rewrites reads in the AST to literal subtrees when a name’s current constant is known.
+        - dead code elimiation:code that is impossible to reach, such as while(0==1) is elimiated to keep 
+        - loop unrolling: loops that only run a couple of times change to repeat code so there is less branching and no looping in the assembler. Implements loop unrolling for loops that run less that 5 times 
+
+
 ## Corrections and limitations
 
 I still needed to steer and fix the tool in several places:
