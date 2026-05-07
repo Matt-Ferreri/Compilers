@@ -22,7 +22,8 @@ Cursor was used as a tool to assist with this codebase.
 
     Code gen:
     Code done completely by cursor:
-    - takes in DSL program, once it gets past AST converts it to java source code, prints it in terminal (and a file), runs it, and shows results
+    - takes in Alan++ program, once it gets past AST converts it to java source code, prints it in terminal (and a file), runs it, and shows results
+    - java code generator: takes in code, runs through code generator, variables have to be declared by scope as java needs to scope to end to be able to declare that variable name again 
 
 
 ## Corrections and limitations

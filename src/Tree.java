@@ -8,6 +8,8 @@ public class Tree {
         String name;
         List<Node> children;
         Node parent;
+        /** Set by {@link SemanticAnalyzer#labelAstBlockScopes} to match {@link #getScopes()} keys. */
+        int blockScopeId = -1;
 
         Node(String name) {
             this.name = name;

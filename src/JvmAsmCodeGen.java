@@ -134,7 +134,7 @@ public class JvmAsmCodeGen {
                 }
             }
             case "Block" -> {
-                int sid = nextBlockScopeId++;
+                int sid = n.blockScopeId >= 0 ? n.blockScopeId : nextBlockScopeId++;
                 scopeStack.add(sid);
                 for (Tree.Node c : n.children) {
                     genNode(c);

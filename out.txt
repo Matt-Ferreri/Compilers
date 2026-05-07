@@ -1,0 +1,588 @@
+Compiling program 1...
+Starting lexing...
+LEXER: LBRACE: [ { ] at line 1, col 0
+LEXER: Type: [ int ] at line 2, col 2
+LEXER: ID: [ a ] at line 2, col 6
+LEXER: ID: [ a ] at line 3, col 2
+LEXER: EQUAL: [ = ] at line 3, col 4
+LEXER: DIGIT: [ 1 ] number at line 3, col 6
+LEXER: Type: [ boolean ] at line 4, col 2
+LEXER: ID: [ t ] at line 4, col 10
+LEXER: ID: [ t ] at line 5, col 2
+LEXER: EQUAL: [ = ] at line 5, col 4
+LEXER: BoolVal: [ true ] at line 5, col 6
+LEXER: Type: [ boolean ] at line 6, col 2
+LEXER: ID: [ f ] at line 6, col 10
+LEXER: ID: [ f ] at line 7, col 2
+LEXER: EQUAL: [ = ] at line 7, col 4
+LEXER: BoolVal: [ false ] at line 7, col 6
+LEXER: Type: [ string ] at line 8, col 2
+LEXER: ID: [ s ] at line 8, col 9
+LEXER: ID: [ s ] at line 9, col 2
+LEXER: EQUAL: [ = ] at line 9, col 4
+LEXER: STRING: [ " ] at line 9, col 6
+LEXER: ID: [ e ] at line 9, col 7
+LEXER: ID: [ d ] at line 9, col 8
+LEXER: ID: [ g ] at line 9, col 9
+LEXER: ID: [ e ] at line 9, col 10
+LEXER: STRING: [ " ] at line 9, col 11
+LEXER: if: [ if ] at line 10, col 2
+LEXER: LPAREN: [ ( ] at line 10, col 5
+LEXER: BoolVal: [ false ] at line 10, col 6
+LEXER: RPAREN: [ ) ] at line 10, col 11
+LEXER: LBRACE: [ { ] at line 10, col 13
+LEXER: print: [ print ] at line 11, col 4
+LEXER: LPAREN: [ ( ] at line 11, col 9
+LEXER: ID: [ a ] at line 11, col 10
+LEXER: RPAREN: [ ) ] at line 11, col 11
+LEXER: RBRACE: [ } ] at line 12, col 2
+LEXER: if: [ if ] at line 13, col 2
+LEXER: LPAREN: [ ( ] at line 13, col 5
+LEXER: BoolVal: [ true ] at line 13, col 6
+LEXER: BOOLOP: [ == ] at line 13, col 11
+LEXER: BoolVal: [ true ] at line 13, col 13
+LEXER: RPAREN: [ ) ] at line 13, col 17
+LEXER: LBRACE: [ { ] at line 13, col 19
+LEXER: print: [ print ] at line 14, col 4
+LEXER: LPAREN: [ ( ] at line 14, col 9
+LEXER: ID: [ a ] at line 14, col 10
+LEXER: RPAREN: [ ) ] at line 14, col 11
+LEXER: RBRACE: [ } ] at line 15, col 2
+LEXER: if: [ if ] at line 16, col 2
+LEXER: LPAREN: [ ( ] at line 16, col 5
+LEXER: ID: [ t ] at line 16, col 6
+LEXER: BOOLOP: [ != ] at line 16, col 8
+LEXER: ID: [ f ] at line 16, col 10
+LEXER: RPAREN: [ ) ] at line 16, col 11
+LEXER: LBRACE: [ { ] at line 16, col 13
+LEXER: Type: [ int ] at line 17, col 4
+LEXER: ID: [ a ] at line 17, col 8
+LEXER: ID: [ a ] at line 18, col 4
+LEXER: EQUAL: [ = ] at line 18, col 6
+LEXER: DIGIT: [ 2 ] number at line 18, col 8
+LEXER: if: [ if ] at line 19, col 4
+LEXER: LPAREN: [ ( ] at line 19, col 7
+LEXER: ID: [ a ] at line 19, col 8
+LEXER: BOOLOP: [ != ] at line 19, col 10
+LEXER: DIGIT: [ 1 ] number at line 19, col 12
+LEXER: RPAREN: [ ) ] at line 19, col 13
+LEXER: LBRACE: [ { ] at line 19, col 15
+LEXER: print: [ print ] at line 20, col 6
+LEXER: LPAREN: [ ( ] at line 20, col 11
+LEXER: ID: [ a ] at line 20, col 12
+LEXER: RPAREN: [ ) ] at line 20, col 13
+LEXER: RBRACE: [ } ] at line 21, col 4
+LEXER: while: [ while ] at line 22, col 4
+LEXER: LPAREN: [ ( ] at line 22, col 10
+LEXER: DIGIT: [ 1 ] number at line 22, col 11
+LEXER: BOOLOP: [ != ] at line 22, col 13
+LEXER: DIGIT: [ 1 ] number at line 22, col 15
+LEXER: RPAREN: [ ) ] at line 22, col 16
+LEXER: LBRACE: [ { ] at line 22, col 18
+LEXER: print: [ print ] at line 23, col 6
+LEXER: LPAREN: [ ( ] at line 23, col 11
+LEXER: ID: [ a ] at line 23, col 12
+LEXER: RPAREN: [ ) ] at line 23, col 13
+LEXER: RBRACE: [ } ] at line 24, col 4
+LEXER: while: [ while ] at line 25, col 4
+LEXER: LPAREN: [ ( ] at line 25, col 10
+LEXER: DIGIT: [ 0 ] number at line 25, col 11
+LEXER: BOOLOP: [ == ] at line 25, col 13
+LEXER: DIGIT: [ 0 ] number at line 25, col 15
+LEXER: RPAREN: [ ) ] at line 25, col 16
+LEXER: LBRACE: [ { ] at line 25, col 18
+LEXER: Type: [ int ] at line 26, col 6
+LEXER: ID: [ k ] at line 26, col 10
+LEXER: ID: [ k ] at line 27, col 6
+LEXER: EQUAL: [ = ] at line 27, col 8
+LEXER: DIGIT: [ 1 ] number at line 27, col 10
+LEXER: print: [ print ] at line 28, col 6
+LEXER: LPAREN: [ ( ] at line 28, col 11
+LEXER: ID: [ k ] at line 28, col 12
+LEXER: RPAREN: [ ) ] at line 28, col 13
+LEXER: ID: [ k ] at line 29, col 6
+LEXER: EQUAL: [ = ] at line 29, col 8
+LEXER: DIGIT: [ 1 ] number at line 29, col 10
+LEXER: PLUS: [ + ] at line 29, col 12
+LEXER: ID: [ k ] at line 29, col 14
+LEXER: if: [ if ] at line 30, col 6
+LEXER: LPAREN: [ ( ] at line 30, col 9
+LEXER: ID: [ k ] at line 30, col 10
+LEXER: BOOLOP: [ != ] at line 30, col 12
+LEXER: DIGIT: [ 1 ] number at line 30, col 14
+LEXER: RPAREN: [ ) ] at line 30, col 15
+LEXER: LBRACE: [ { ] at line 30, col 17
+LEXER: RBRACE: [ } ] at line 31, col 6
+LEXER: RBRACE: [ } ] at line 32, col 4
+LEXER: RBRACE: [ } ] at line 33, col 2
+LEXER: print: [ print ] at line 34, col 2
+LEXER: LPAREN: [ ( ] at line 34, col 7
+LEXER: ID: [ a ] at line 34, col 8
+LEXER: RPAREN: [ ) ] at line 34, col 9
+LEXER: print: [ print ] at line 35, col 2
+LEXER: LPAREN: [ ( ] at line 35, col 7
+LEXER: ID: [ s ] at line 35, col 8
+LEXER: RPAREN: [ ) ] at line 35, col 9
+LEXER: RBRACE: [ } ] at line 36, col 0
+LEXER: EOP: [ $ ] number 1 at line 36, col 1
+0 warning(s) found.
+No errors moving on to parse...
+
+Starting Parse...
+<Program> 
+-<Block> 
+--[{]
+--<StatementList> 
+---<Statement> 
+----<VarDecl> 
+-----[int]
+-----<ID> 
+------[a]
+---<StatementList> 
+----<Statement> 
+-----<AssignmentStatement> 
+------<ID> 
+-------[a]
+------[=]
+------<Expr> 
+-------<IntExpr> 
+--------[1]
+----<StatementList> 
+-----<Statement> 
+------<VarDecl> 
+-------[boolean]
+-------<ID> 
+--------[t]
+-----<StatementList> 
+------<Statement> 
+-------<AssignmentStatement> 
+--------<ID> 
+---------[t]
+--------[=]
+--------<Expr> 
+---------<BooleanExpr> 
+----------[true]
+------<StatementList> 
+-------<Statement> 
+--------<VarDecl> 
+---------[boolean]
+---------<ID> 
+----------[f]
+-------<StatementList> 
+--------<Statement> 
+---------<AssignmentStatement> 
+----------<ID> 
+-----------[f]
+----------[=]
+----------<Expr> 
+-----------<BooleanExpr> 
+------------[false]
+--------<StatementList> 
+---------<Statement> 
+----------<VarDecl> 
+-----------[string]
+-----------<ID> 
+------------[s]
+---------<StatementList> 
+----------<Statement> 
+-----------<AssignmentStatement> 
+------------<ID> 
+-------------[s]
+------------[=]
+------------<Expr> 
+-------------<StringExpr> 
+--------------["]
+--------------<CharList> 
+---------------[e]
+---------------<CharList> 
+----------------[d]
+----------------<CharList> 
+-----------------[g]
+-----------------<CharList> 
+------------------[e]
+------------------[CharList]
+--------------["]
+----------<StatementList> 
+-----------<Statement> 
+------------<IfStatement> 
+-------------[if]
+-------------<BooleanExpr> 
+--------------[(]
+--------------[false]
+--------------[)]
+-------------<Block> 
+--------------[{]
+--------------<StatementList> 
+---------------<Statement> 
+----------------<PrintStatement> 
+-----------------[print]
+-----------------[(]
+-----------------<Expr> 
+------------------<ID> 
+-------------------[a]
+-----------------[)]
+---------------[StatementList]
+--------------[}]
+-----------<StatementList> 
+------------<Statement> 
+-------------<IfStatement> 
+--------------[if]
+--------------<BooleanExpr> 
+---------------[(]
+---------------<Expr> 
+----------------<BooleanExpr> 
+-----------------[true]
+---------------[==]
+---------------<Expr> 
+----------------<BooleanExpr> 
+-----------------[true]
+---------------[)]
+--------------<Block> 
+---------------[{]
+---------------<StatementList> 
+----------------<Statement> 
+-----------------<PrintStatement> 
+------------------[print]
+------------------[(]
+------------------<Expr> 
+-------------------<ID> 
+--------------------[a]
+------------------[)]
+----------------[StatementList]
+---------------[}]
+------------<StatementList> 
+-------------<Statement> 
+--------------<IfStatement> 
+---------------[if]
+---------------<BooleanExpr> 
+----------------[(]
+----------------<Expr> 
+-----------------<ID> 
+------------------[t]
+----------------[!=]
+----------------<Expr> 
+-----------------<ID> 
+------------------[f]
+----------------[)]
+---------------<Block> 
+----------------[{]
+----------------<StatementList> 
+-----------------<Statement> 
+------------------<VarDecl> 
+-------------------[int]
+-------------------<ID> 
+--------------------[a]
+-----------------<StatementList> 
+------------------<Statement> 
+-------------------<AssignmentStatement> 
+--------------------<ID> 
+---------------------[a]
+--------------------[=]
+--------------------<Expr> 
+---------------------<IntExpr> 
+----------------------[2]
+------------------<StatementList> 
+-------------------<Statement> 
+--------------------<IfStatement> 
+---------------------[if]
+---------------------<BooleanExpr> 
+----------------------[(]
+----------------------<Expr> 
+-----------------------<ID> 
+------------------------[a]
+----------------------[!=]
+----------------------<Expr> 
+-----------------------<IntExpr> 
+------------------------[1]
+----------------------[)]
+---------------------<Block> 
+----------------------[{]
+----------------------<StatementList> 
+-----------------------<Statement> 
+------------------------<PrintStatement> 
+-------------------------[print]
+-------------------------[(]
+-------------------------<Expr> 
+--------------------------<ID> 
+---------------------------[a]
+-------------------------[)]
+-----------------------[StatementList]
+----------------------[}]
+-------------------<StatementList> 
+--------------------<Statement> 
+---------------------<WhileStatement> 
+----------------------[while]
+----------------------<BooleanExpr> 
+-----------------------[(]
+-----------------------<Expr> 
+------------------------<IntExpr> 
+-------------------------[1]
+-----------------------[!=]
+-----------------------<Expr> 
+------------------------<IntExpr> 
+-------------------------[1]
+-----------------------[)]
+----------------------<Block> 
+-----------------------[{]
+-----------------------<StatementList> 
+------------------------<Statement> 
+-------------------------<PrintStatement> 
+--------------------------[print]
+--------------------------[(]
+--------------------------<Expr> 
+---------------------------<ID> 
+----------------------------[a]
+--------------------------[)]
+------------------------[StatementList]
+-----------------------[}]
+--------------------<StatementList> 
+---------------------<Statement> 
+----------------------<WhileStatement> 
+-----------------------[while]
+-----------------------<BooleanExpr> 
+------------------------[(]
+------------------------<Expr> 
+-------------------------<IntExpr> 
+--------------------------[0]
+------------------------[==]
+------------------------<Expr> 
+-------------------------<IntExpr> 
+--------------------------[0]
+------------------------[)]
+-----------------------<Block> 
+------------------------[{]
+------------------------<StatementList> 
+-------------------------<Statement> 
+--------------------------<VarDecl> 
+---------------------------[int]
+---------------------------<ID> 
+----------------------------[k]
+-------------------------<StatementList> 
+--------------------------<Statement> 
+---------------------------<AssignmentStatement> 
+----------------------------<ID> 
+-----------------------------[k]
+----------------------------[=]
+----------------------------<Expr> 
+-----------------------------<IntExpr> 
+------------------------------[1]
+--------------------------<StatementList> 
+---------------------------<Statement> 
+----------------------------<PrintStatement> 
+-----------------------------[print]
+-----------------------------[(]
+-----------------------------<Expr> 
+------------------------------<ID> 
+-------------------------------[k]
+-----------------------------[)]
+---------------------------<StatementList> 
+----------------------------<Statement> 
+-----------------------------<AssignmentStatement> 
+------------------------------<ID> 
+-------------------------------[k]
+------------------------------[=]
+------------------------------<Expr> 
+-------------------------------<IntExpr> 
+--------------------------------[1]
+--------------------------------[+]
+--------------------------------<Expr> 
+---------------------------------<ID> 
+----------------------------------[k]
+----------------------------<StatementList> 
+-----------------------------<Statement> 
+------------------------------<IfStatement> 
+-------------------------------[if]
+-------------------------------<BooleanExpr> 
+--------------------------------[(]
+--------------------------------<Expr> 
+---------------------------------<ID> 
+----------------------------------[k]
+--------------------------------[!=]
+--------------------------------<Expr> 
+---------------------------------<IntExpr> 
+----------------------------------[1]
+--------------------------------[)]
+-------------------------------<Block> 
+--------------------------------[{]
+--------------------------------[StatementList]
+--------------------------------[}]
+-----------------------------[StatementList]
+------------------------[}]
+---------------------[StatementList]
+----------------[}]
+-------------<StatementList> 
+--------------<Statement> 
+---------------<PrintStatement> 
+----------------[print]
+----------------[(]
+----------------<Expr> 
+-----------------<ID> 
+------------------[a]
+----------------[)]
+--------------<StatementList> 
+---------------<Statement> 
+----------------<PrintStatement> 
+-----------------[print]
+-----------------[(]
+-----------------<Expr> 
+------------------<ID> 
+-------------------[s]
+-----------------[)]
+---------------[StatementList]
+--[}]
+-[$]
+No errors moving on to semantic analysis...
+
+Starting Semantic Analysis...
+
+--- Abstract Syntax Tree ---
+<Program> 
+-<Block> 
+--<VarDecl> 
+---[int]
+---[a]
+--<AssignmentStatement> 
+---[a]
+---<IntExpr> 
+----[1]
+--<VarDecl> 
+---[boolean]
+---[t]
+--<AssignmentStatement> 
+---[t]
+---<BooleanExpr> 
+----[true]
+--<VarDecl> 
+---[boolean]
+---[f]
+--<AssignmentStatement> 
+---[f]
+---<BooleanExpr> 
+----[false]
+--<VarDecl> 
+---[string]
+---[s]
+--<AssignmentStatement> 
+---[s]
+---<StringExpr> 
+----[edge]
+--<Block> 
+---<PrintStatement> 
+----<IntExpr> 
+-----[1]
+--<Block> 
+---<VarDecl> 
+----[int]
+----[a]
+---<AssignmentStatement> 
+----[a]
+----<IntExpr> 
+-----[2]
+---<Block> 
+----<PrintStatement> 
+-----<IntExpr> 
+------[2]
+---<WhileStatement> 
+----<BooleanExpr> 
+-----[true]
+----<Block> 
+-----<VarDecl> 
+------[int]
+------[k]
+-----<AssignmentStatement> 
+------[k]
+------<IntExpr> 
+-------[1]
+-----<PrintStatement> 
+------<IntExpr> 
+-------[1]
+-----<AssignmentStatement> 
+------[k]
+------<IntExpr> 
+-------[2]
+-----[Block]
+--<PrintStatement> 
+---<IntExpr> 
+----[1]
+--<PrintStatement> 
+---[s]
+
+---------------------------
+
+
+--- Symbol Table ---
+Scope 6:
+  k | type: int | addr: -1 | initialized: true | used: true
+Scope 5:
+Scope 4:
+Scope 3:
+  a | type: int | addr: -1 | initialized: true | used: true
+Scope 2:
+Scope 1:
+Scope 0:
+  a | type: int | addr: -1 | initialized: true | used: true
+  f | type: boolean | addr: -1 | initialized: true | used: true
+  s | type: string | addr: -1 | initialized: true | used: true
+  t | type: boolean | addr: -1 | initialized: true | used: true
+Scope 7:
+--------------------
+No errors moving on to code generation...
+
+A9 01 8D 5A 00 A9 01 8D 5D 00 A9 00 8D 5B 00 A9 
+FB 8D 5C 00 A9 01 8D 60 00 AC 60 00 A2 01 FF A9 
+02 8D 5E 00 A9 02 8D 60 00 AC 60 00 A2 01 FF A9 
+01 8D 5F 00 A9 01 8D 60 00 AC 60 00 A2 01 FF A9 
+02 8D 5F 00 A9 01 D0 E7 A9 01 8D 60 00 AC 60 00 
+A2 01 FF AC 5C 00 A2 02 FF 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 65 64 67 65 00 
+LLVM IR written: C:\Users\ma8fe\compile\out\program_1.ll
+; Generated LLVM IR
+declare i32 @printf(i8*, ...)
+
+@.fmt_intnl = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
+@.fmt_strnl = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
+@.str_lit_0 = private unnamed_addr constant [5 x i8] c"edge\00", align 1
+
+define i32 @main() {
+entry:
+  %ptr_s0_a = alloca i32, align 4
+  %ptr_s0_t = alloca i32, align 4
+  %ptr_s0_f = alloca i32, align 4
+  %ptr_s0_s = alloca i8*, align 8
+  %ptr_s3_a = alloca i32, align 4
+  %ptr_s6_k = alloca i32, align 4
+  store i32 1, i32* %ptr_s0_a
+  store i32 1, i32* %ptr_s0_t
+  store i32 0, i32* %ptr_s0_f
+  %t0 = getelementptr inbounds [5 x i8], [5 x i8]* @.str_lit_0, i64 0, i64 0
+  store i8* %t0, i8** %ptr_s0_s
+  %t1 = getelementptr inbounds [4 x i8], [4 x i8]* @.fmt_intnl, i64 0, i64 0
+  call i32 (i8*, ...) @printf(i8* %t1, i32 1)
+  store i32 2, i32* %ptr_s3_a
+  %t2 = getelementptr inbounds [4 x i8], [4 x i8]* @.fmt_intnl, i64 0, i64 0
+  call i32 (i8*, ...) @printf(i8* %t2, i32 2)
+  br label %while_head0
+while_head0:
+  store i32 1, i32* %ptr_s6_k
+  %t3 = getelementptr inbounds [4 x i8], [4 x i8]* @.fmt_intnl, i64 0, i64 0
+  call i32 (i8*, ...) @printf(i8* %t3, i32 1)
+  store i32 2, i32* %ptr_s6_k
+  br label %while_head0
+  %t4 = getelementptr inbounds [4 x i8], [4 x i8]* @.fmt_intnl, i64 0, i64 0
+  call i32 (i8*, ...) @printf(i8* %t4, i32 1)
+  %t5 = load i8*, i8** %ptr_s0_s, align 8
+  %t6 = getelementptr inbounds [4 x i8], [4 x i8]* @.fmt_strnl, i64 0, i64 0
+  call i32 (i8*, ...) @printf(i8* %t6, i8* %t5)
+  ret i32 0
+}
+
+JVM class written: out/compile/Program1.class (473 bytes)

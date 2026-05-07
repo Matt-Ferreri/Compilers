@@ -1,4 +1,5 @@
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -16,8 +17,11 @@ public class main {
         final boolean isCodeGeneratorVerbose = true;
         final boolean isLlvmVerbose = true;
         final boolean isJvmVerbose = true;
+        final boolean isJavaSourceVerbose = false;
         /** If true, run {@code java -cp out compile.ProgramN} after successful JVM codegen. */
         final boolean runJvmAfterCompile = true;
+        /** If true, run {@code javac -d out/javac_classes} then {@code java -cp out/javac_classes compile.ProgramN} on emitted source. */
+        final boolean runJavacAfterCompile = true;
 
         // create one lexer and let it keep track of where the next program starts
         Lex lex = new Lex();
@@ -140,6 +144,30 @@ public class main {
                         System.err.println("JVM write/run failed: " + ex.getMessage());
                     }
                 }
+
+                JavaSourceCodeGen javaSrc = new JavaSourceCodeGen();
+                javaSrc.run(ast, semanticAnalyzer, programNumber);
+                if (javaSrc.hasErrors()) {
+                    compilationHadErrors = true;
+                    for (String e : javaSrc.getErrors()) {
+                        System.err.println("Java source codegen: " + e);
+                    }
+                } else {
+                    try {
+                        javaSrc.writeJavaFile();
+                        if (isJavaSourceVerbose) {
+                            Path jp = Path.of("out", "java_src", "compile", "Program" + programNumber + ".java");
+                            System.out.println("Java source written: " + jp.toAbsolutePath());
+                            System.out.println(javaSrc.getJavaSource());
+                        }
+                        if (runJavacAfterCompile) {
+                            runJavacAndJavaSubprocess(programNumber);
+                        }
+                    } catch (Exception ex) {
+                        compilationHadErrors = true;
+                        System.err.println("Java source write/javac failed: " + ex.getMessage());
+                    }
+                }
             }
 
         }
@@ -170,6 +198,48 @@ public class main {
         }
         if (p.exitValue() != 0) {
             System.err.println("java exited with " + p.exitValue() + " for " + mainClass);
+        }
+    }
+
+    private static void runJavacAndJavaSubprocess(int programNumber) throws Exception {
+        Files.createDirectories(Path.of("out", "javac_classes"));
+        Path javaFile = Path.of("out", "java_src", "compile", "Program" + programNumber + ".java");
+        ProcessBuilder javacPb = new ProcessBuilder(
+                "javac", "-encoding", "UTF-8", "-d", "out/javac_classes",
+                javaFile.toString().replace('\\', '/'));
+        javacPb.redirectErrorStream(true);
+        Process jc = javacPb.start();
+        boolean jcDone = jc.waitFor(60, TimeUnit.SECONDS);
+        if (!jcDone) {
+            jc.destroyForcibly();
+            System.err.println("javac timed out for Program" + programNumber);
+            return;
+        }
+        String jcOut = new String(jc.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        if (!jcOut.isEmpty()) {
+            System.out.println("[javac Program" + programNumber + "]\n" + jcOut);
+        }
+        if (jc.exitValue() != 0) {
+            System.err.println("javac exited with " + jc.exitValue() + " for Program" + programNumber);
+            return;
+        }
+
+        ProcessBuilder javaPb = new ProcessBuilder(
+                "java", "-cp", "out/javac_classes", "compile.Program" + programNumber);
+        javaPb.redirectErrorStream(true);
+        Process jv = javaPb.start();
+        boolean jvDone = jv.waitFor(30, TimeUnit.SECONDS);
+        if (!jvDone) {
+            jv.destroyForcibly();
+            System.err.println("java (javac output) timed out for compile.Program" + programNumber);
+            return;
+        }
+        String jvOut = new String(jv.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        if (!jvOut.isEmpty()) {
+            System.out.println("[java compile.Program" + programNumber + " from javac]\n" + jvOut);
+        }
+        if (jv.exitValue() != 0) {
+            System.err.println("java exited with " + jv.exitValue() + " for javac-built Program" + programNumber);
         }
     }
 }
