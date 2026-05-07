@@ -1,19 +1,31 @@
-
-{
-  STRING a
-  a = "Hello world"
-  print(a )
-  int b
-  b = 3
-  int C
-  c = 3
-  int x 
-  x = 3 + 9
-  if (3=4){
-    print(x)
-  }
-}
-$
-
-
-
+{
+  int n
+  n = 8
+  if (n != n) {
+    print(n)
+  }
+  print(n)
+}$
+{
+  boolean a
+  boolean b
+  a = true
+  b = false
+  if (a != b) {
+    int v
+    v = 6
+    print(v)
+  }
+}$
+{
+  int x
+  x = 0
+  if (true == true) {
+    print(x)
+  }
+}$
+{
+  string w
+  w = "hello"
+  print(w)
+}$

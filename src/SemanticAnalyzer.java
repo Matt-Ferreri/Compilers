@@ -72,9 +72,12 @@ public class SemanticAnalyzer {
         createASTFromCST();
         foldConstantExpressions(AST.getRoot());
         checkScopeAndTypes(tokens);
+        unrollSmallCountedWhileLoops(AST.getRoot());
+        foldConstantExpressions(AST.getRoot());
         propagateConstants(AST.getRoot());
         foldConstantExpressions(AST.getRoot());
         eliminateUnreachableCode(AST.getRoot());
+        foldConstantExpressions(AST.getRoot());
         return AST;
     }
 
@@ -772,10 +775,9 @@ public class SemanticAnalyzer {
                 if (!"Block".equals(body.name) || body.children == null) {
                     return one;
                 }
-                List<Tree.Node> hoisted = new ArrayList<>();
-                for (Tree.Node s : body.children) {
-                    hoisted.add(s);
-                }
+                // Keep the then-Block so codegen scope nesting matches the symbol table.
+                List<Tree.Node> hoisted = new ArrayList<>(1);
+                hoisted.add(body);
                 return hoisted;
             }
             return one;
@@ -792,6 +794,277 @@ public class SemanticAnalyzer {
             return one;
         }
         return one;
+    }
+
+    // --- loop unrolling: counted while (i != N), N in 1..4, with i=0 before and i = 1 + i last in body ---
+
+    private static final class CounterWhilePattern {
+        final String varName;
+        /** Trip count: {@code  while (var != N)} with var starting at 0 and +1 each iteration. */
+        final int tripCount;
+
+        CounterWhilePattern(String varName, int tripCount) {
+            this.varName = varName;
+            this.tripCount = tripCount;
+        }
+    }
+
+    private void unrollSmallCountedWhileLoops(Tree.Node root) {
+        if (root == null || !"Program".equals(root.name) || root.children == null || root.children.isEmpty()) {
+            return;
+        }
+        Tree.Node block = root.children.get(0);
+        if (block != null && "Block".equals(block.name)) {
+            unrollWhileLoopsDfs(block);
+        }
+    }
+
+    private void unrollWhileLoopsDfs(Tree.Node n) {
+        if (n == null) {
+            return;
+        }
+        if ("Block".equals(n.name)) {
+            for (Tree.Node c : n.children) {
+                if ("Block".equals(c.name)) {
+                    unrollWhileLoopsDfs(c);
+                } else if ("IfStatement".equals(c.name) && c.children != null && c.children.size() >= 2) {
+                    unrollWhileLoopsDfs(c.children.get(1));
+                } else if ("WhileStatement".equals(c.name) && c.children != null && c.children.size() >= 2) {
+                    unrollWhileLoopsDfs(c.children.get(1));
+                }
+            }
+            applyCountedWhileUnrollInBlock(n);
+            return;
+        }
+        if (n.children != null) {
+            for (Tree.Node c : n.children) {
+                unrollWhileLoopsDfs(c);
+            }
+        }
+    }
+
+    private void applyCountedWhileUnrollInBlock(Tree.Node block) {
+        if (block == null || block.children == null) {
+            return;
+        }
+        List<Tree.Node> out = new ArrayList<>();
+        boolean any = false;
+        for (Tree.Node c : new ArrayList<>(block.children)) {
+            if ("WhileStatement".equals(c.name)) {
+                List<Tree.Node> u = tryUnrollCountedWhile(c, block);
+                if (u != null) {
+                    out.addAll(u);
+                    any = true;
+                } else {
+                    out.add(c);
+                }
+            } else {
+                out.add(c);
+            }
+        }
+        if (!any) {
+            return;
+        }
+        block.children.clear();
+        for (Tree.Node x : out) {
+            x.parent = block;
+            block.children.add(x);
+        }
+    }
+
+    private List<Tree.Node> tryUnrollCountedWhile(Tree.Node whileStmt, Tree.Node parentBlock) {
+        if (whileStmt == null || whileStmt.children == null || whileStmt.children.size() < 2) {
+            return null;
+        }
+        Tree.Node cond = whileStmt.children.get(0);
+        if (foldedBooleanCondition(cond) != null) {
+            return null;
+        }
+        CounterWhilePattern pat = parseNotEqualCounterWhilePattern(cond);
+        if (pat == null) {
+            return null;
+        }
+        if (!hasZeroInitBeforeWhile(parentBlock, whileStmt, pat.varName)) {
+            return null;
+        }
+        Tree.Node body = whileStmt.children.get(1);
+        if (!"Block".equals(body.name) || body.children == null || body.children.isEmpty()) {
+            return null;
+        }
+        Tree.Node last = body.children.get(body.children.size() - 1);
+        if (!isPlusOneIncrement(last, pat.varName)) {
+            return null;
+        }
+        List<Tree.Node> template = new ArrayList<>();
+        for (int i = 0; i < body.children.size() - 1; i++) {
+            template.add(body.children.get(i));
+        }
+        List<Tree.Node> result = new ArrayList<>();
+        for (int k = 0; k < pat.tripCount; k++) {
+            for (Tree.Node tmpl : template) {
+                Tree.Node copy = copyAstNode(tmpl);
+                substituteIdentifierWithIntLiteral(copy, pat.varName, k);
+                result.add(copy);
+            }
+        }
+        result.add(makeIntAssignment(pat.varName, pat.tripCount));
+        return result;
+    }
+
+    /** {@code var != N} or {@code N != var} with literal N in 1..4; trip count is N (var starts at 0, ++ each time). */
+    private CounterWhilePattern parseNotEqualCounterWhilePattern(Tree.Node cond) {
+        if (cond == null || !"BooleanExpr".equals(cond.name)) {
+            return null;
+        }
+        int opIx = -1;
+        for (int i = 0; i < cond.children.size(); i++) {
+            if ("!=".equals(cond.children.get(i).name)) {
+                opIx = i;
+                break;
+            }
+        }
+        if (opIx < 1 || opIx + 1 >= cond.children.size()) {
+            return null;
+        }
+        Tree.Node lhs = cond.children.get(opIx - 1);
+        Tree.Node rhs = cond.children.get(opIx + 1);
+        String vLeft = identifierLeafName(lhs);
+        Integer nRight = intConstFromExprSide(rhs);
+        String vRight = identifierLeafName(rhs);
+        Integer nLeft = intConstFromExprSide(lhs);
+        if (vLeft != null && nRight != null) {
+            return boundedTripPattern(vLeft, nRight);
+        }
+        if (vRight != null && nLeft != null) {
+            return boundedTripPattern(vRight, nLeft);
+        }
+        return null;
+    }
+
+    private CounterWhilePattern boundedTripPattern(String var, int n) {
+        if (n < 1 || n > 4) {
+            return null;
+        }
+        return new CounterWhilePattern(var, n);
+    }
+
+    private String identifierLeafName(Tree.Node n) {
+        if (!isLeaf(n)) {
+            return null;
+        }
+        if (parseIntConstant(n.name) != null) {
+            return null;
+        }
+        if ("true".equals(n.name) || "false".equals(n.name)) {
+            return null;
+        }
+        return n.name;
+    }
+
+    private Integer intConstFromExprSide(Tree.Node n) {
+        if (n == null) {
+            return null;
+        }
+        if ("IntExpr".equals(n.name)) {
+            return evaluateIntExprConstant(n);
+        }
+        return parseIntConstant(n.name);
+    }
+
+    private boolean hasZeroInitBeforeWhile(Tree.Node block, Tree.Node whileNode, String var) {
+        int idx = block.children.indexOf(whileNode);
+        if (idx <= 0) {
+            return false;
+        }
+        for (int i = idx - 1; i >= 0; i--) {
+            Tree.Node s = block.children.get(i);
+            if (!"AssignmentStatement".equals(s.name) || s.children == null || s.children.isEmpty()) {
+                continue;
+            }
+            if (!var.equals(s.children.get(0).name)) {
+                continue;
+            }
+            Integer v = assignmentRhsIntValue(s);
+            return v != null && v == 0;
+        }
+        return false;
+    }
+
+    private Integer assignmentRhsIntValue(Tree.Node assign) {
+        if (assign == null || assign.children == null || assign.children.size() < 2) {
+            return null;
+        }
+        Tree.Node rhs = assign.children.get(1);
+        if ("IntExpr".equals(rhs.name)) {
+            return evaluateIntExprConstant(rhs);
+        }
+        if (isLeaf(rhs)) {
+            return parseIntConstant(rhs.name);
+        }
+        return null;
+    }
+
+    /** RHS is {@code 1 + var} as IntExpr leaves {@code [1][+][var]}. */
+    private boolean isPlusOneIncrement(Tree.Node assign, String var) {
+        if (!"AssignmentStatement".equals(assign.name) || assign.children == null || assign.children.size() < 2) {
+            return false;
+        }
+        if (!var.equals(assign.children.get(0).name)) {
+            return false;
+        }
+        Tree.Node rhs = assign.children.get(1);
+        if (!"IntExpr".equals(rhs.name) || rhs.children == null || rhs.children.size() != 3) {
+            return false;
+        }
+        if (!"1".equals(rhs.children.get(0).name) || !"+".equals(rhs.children.get(1).name)) {
+            return false;
+        }
+        Tree.Node third = rhs.children.get(2);
+        return isLeaf(third) && var.equals(third.name);
+    }
+
+    private Tree.Node copyAstNode(Tree.Node n) {
+        Tree.Node c = new Tree.Node(n.name);
+        if (n.children != null) {
+            for (Tree.Node ch : n.children) {
+                Tree.Node cc = copyAstNode(ch);
+                c.children.add(cc);
+                cc.parent = c;
+            }
+        }
+        return c;
+    }
+
+    private void substituteIdentifierWithIntLiteral(Tree.Node n, String var, int k) {
+        if (n == null) {
+            return;
+        }
+        if (isLeaf(n) && var.equals(n.name)) {
+            Tree.Node rep = new Tree.Node("IntExpr");
+            Tree.Node lit = new Tree.Node(Integer.toString(k));
+            rep.children.add(lit);
+            lit.parent = rep;
+            replaceTreeNodeInParent(n, rep);
+            return;
+        }
+        if (n.children != null) {
+            for (Tree.Node c : new ArrayList<>(n.children)) {
+                substituteIdentifierWithIntLiteral(c, var, k);
+            }
+        }
+    }
+
+    private Tree.Node makeIntAssignment(String var, int value) {
+        Tree.Node asg = new Tree.Node("AssignmentStatement");
+        Tree.Node lhs = new Tree.Node(var);
+        Tree.Node rhs = new Tree.Node("IntExpr");
+        rhs.children.add(new Tree.Node(Integer.toString(value)));
+        rhs.children.get(0).parent = rhs;
+        asg.children.add(lhs);
+        asg.children.add(rhs);
+        lhs.parent = asg;
+        rhs.parent = asg;
+        return asg;
     }
 
     private boolean isLeaf(Tree.Node node) {
@@ -915,9 +1188,10 @@ public class SemanticAnalyzer {
                             continue; // skip the rest of the checks for this token since we already know it is an error
                 }
                 if (!hasErrors) {
-                    // if we have no errors, we can mark the variable as initialized
-                    Symbol symbol = scopes.get(String.valueOf(currentScope)).get(token.value);
-                    symbol.isInitialized = true;
+                    Symbol symbol = resolveSymbol(currentScope, token.value);
+                    if (symbol != null) {
+                        symbol.isInitialized = true;
+                    }
                 }
 
             }
@@ -1017,6 +1291,19 @@ public class SemanticAnalyzer {
         return null;
     }
 
+    /** Innermost scope that defines {@code variableName}, or {@code null}. */
+    private Symbol resolveSymbol(int currentScope, String variableName) {
+        int scope = currentScope;
+        while (scope >= 0) {
+            if (scopes.containsKey(String.valueOf(scope))
+                    && scopes.get(String.valueOf(scope)).containsKey(variableName)) {
+                return scopes.get(String.valueOf(scope)).get(variableName);
+            }
+            scope = parentScope.getOrDefault(scope, -1);
+        }
+        return null;
+    }
+
     // validates the boolean condition that follows a while or if keyword
     // handles both simple boolval (true/false) and parenthesized (Expr BoolOp Expr)
     private void checkBooleanCondition(int startIndex, int currentScope, String statementKind) {
@@ -1036,6 +1323,12 @@ public class SemanticAnalyzer {
                 errors++;
                 System.out.println("Error: Missing closing parenthesis in " + statementKind
                         + " condition at line " + first.line + " position " + first.position);
+                return;
+            }
+
+            // ( true ) / ( false ) — single BoolVal, no BOOLOP
+            if (rparenIndex == startIndex + 2
+                    && tokens.get(startIndex + 1).tokenType == Lex.characterType.BOOLVAL) {
                 return;
             }
 

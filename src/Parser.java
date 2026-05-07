@@ -400,14 +400,19 @@ public class Parser {
         if (currentToken == Lex.characterType.LPAREN) {
             // first match the first (
             match(Lex.characterType.LPAREN);
-            // next it has an Expr
-            parseExpr();
-            // then it has a boolop
-            parseBoolOp();
-            // has another Expr
-            parseExpr();
-            // ends with a ) so match that
-            match(Lex.characterType.RPAREN);
+            // ( false ) / ( true ) — only when immediately closed; else ( Expr BOOLOP Expr )
+            if (current + 1 < tokens.size()
+                    && tokens.get(current).tokenType == Lex.characterType.BOOLVAL
+                // need to check if the next token is a right paren to prevent ex: true == true?
+                    && tokens.get(current + 1).tokenType == Lex.characterType.RPAREN) {
+                parseBoolVal();
+                match(Lex.characterType.RPAREN);
+            } else {
+                parseExpr();
+                parseBoolOp();
+                parseExpr();
+                match(Lex.characterType.RPAREN);
+            }
         }
 
         else if (currentToken == Lex.characterType.BOOLVAL) {

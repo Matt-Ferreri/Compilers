@@ -18,7 +18,7 @@ Cursor was used as a tool to assist with this codebase.
         - constant folding: does computations and puts those in AST. For example if a variable is being set to 3 + 5, it will just set 8 in the AST or a bool expreession can be computed such as 3==4, it will set to false in the AST
         - Constant propagation: records each variable’s compile-time value after assignments, with scope changes copy the map per scope so shadowing works, merges constants back to the map when leaving a block only for variables from origional scope, and rewrites reads in the AST to literal subtrees when a name’s current constant is known.
         - dead code elimiation:code that is impossible to reach, such as while(0==1) is elimiated to keep 
-        - loop unrolling: 
+        - loop unrolling: loops that only run a couple of times change to repeat code so there is less branching and no looping in the assembler. Implements loop unrolling for loops that run less that 5 times 
 
 
 ## Corrections and limitations
