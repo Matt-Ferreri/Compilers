@@ -1,31 +1,15 @@
 {
-  int n
-  n = 8
-  if (n != n) {
-    print(n)
+  int a
+  a = 1
+  {
+    int b
+    b = 2
+    {
+      int c
+      c = 3
+      print(a)
+      print(b)
+      print(c)
+    }
   }
-  print(n)
-}$
-{
-  boolean a
-  boolean b
-  a = true
-  b = false
-  if (a != b) {
-    int v
-    v = 6
-    print(v)
-  }
-}$
-{
-  int x
-  x = 0
-  if (true == true) {
-    print(x)
-  }
-}$
-{
-  string w
-  w = "hello"
-  print(w)
 }$

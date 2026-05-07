@@ -1,4 +1,7 @@
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class main {
     public static void main(String[] args) throws Exception {
@@ -7,10 +10,14 @@ public class main {
 
         // verbose mode that can be toggled on and off depending on how much output is
         // wanted
-        final boolean isLexerVerbose = false;
-        final boolean isParserVerbose = false;
-        final boolean isSemanticAnalyzerVerbose = false;
-        final boolean isCodeGeneratorVerbose = false;
+        final boolean isLexerVerbose = true;
+        final boolean isParserVerbose = true;
+        final boolean isSemanticAnalyzerVerbose = true;
+        final boolean isCodeGeneratorVerbose = true;
+        final boolean isLlvmVerbose = true;
+        final boolean isJvmVerbose = true;
+        /** If true, run {@code java -cp out compile.ProgramN} after successful JVM codegen. */
+        final boolean runJvmAfterCompile = true;
 
         // create one lexer and let it keep track of where the next program starts
         Lex lex = new Lex();
@@ -65,7 +72,7 @@ public class main {
                 compilationHadErrors = true;
                 continue;
             }
-            else if (isSemanticAnalyzerVerbose && !compilationHadErrors) {
+            else if (isSemanticAnalyzerVerbose) {
                 semanticAnalyzer.printAST();
                 semanticAnalyzer.printAndReturnSymbolTable();
             }
@@ -78,13 +85,61 @@ public class main {
             codeGenerator.run(ast, semanticAnalyzer);
 
             // if verbose mode is on print the code generation in hex
-            if (isCodeGeneratorVerbose && !compilationHadErrors) {
+            if (isCodeGeneratorVerbose) {
                 codeGenerator.printCodeGrid();
             }
             // code gen shouldn't have errors, but just in case to fail gracefully
             // only error is if the stack/heap overlap
             if (codeGenerator.hasErrors()) {
                 compilationHadErrors = true;
+            }
+
+            // LLVM IR and JVM bytecode — only after semantic success (we are past that gate)
+            if (!compilationHadErrors) {
+                LlvmCodeGen llvm = new LlvmCodeGen();
+                llvm.run(ast, semanticAnalyzer);
+                if (llvm.hasErrors()) {
+                    compilationHadErrors = true;
+                    for (String e : llvm.getErrors()) {
+                        System.err.println("LLVM codegen: " + e);
+                    }
+                } else {
+                    try {
+                        llvm.writeIrFile(programNumber);
+                        if (isLlvmVerbose) {
+                            Path ll = Path.of("out", "program_" + programNumber + ".ll");
+                            System.out.println("LLVM IR written: " + ll.toAbsolutePath());
+                            System.out.println(llvm.getLlvmIr());
+                        }
+                    } catch (Exception ex) {
+                        compilationHadErrors = true;
+                        System.err.println("LLVM write failed: " + ex.getMessage());
+                    }
+                }
+
+                JvmAsmCodeGen jvmCg = new JvmAsmCodeGen();
+                jvmCg.run(ast, semanticAnalyzer, programNumber);
+                if (jvmCg.hasErrors()) {
+                    compilationHadErrors = true;
+                    for (String e : jvmCg.getErrors()) {
+                        System.err.println("JVM codegen: " + e);
+                    }
+                } else {
+                    try {
+                        jvmCg.writeClassFile();
+                        if (isJvmVerbose) {
+                            byte[] bc = jvmCg.getBytecode();
+                            System.out.println("JVM class written: out/compile/Program" + programNumber + ".class ("
+                                    + (bc == null ? 0 : bc.length) + " bytes)");
+                        }
+                        if (runJvmAfterCompile) {
+                            runJavaSubprocess(programNumber);
+                        }
+                    } catch (Exception ex) {
+                        compilationHadErrors = true;
+                        System.err.println("JVM write/run failed: " + ex.getMessage());
+                    }
+                }
             }
 
         }
@@ -96,4 +151,25 @@ public class main {
         }
     }
 
+    private static void runJavaSubprocess(int programNumber) throws Exception {
+        String cp = "out";
+        String mainClass = "compile.Program" + programNumber;
+        ProcessBuilder pb = new ProcessBuilder(
+                "java", "-cp", cp, mainClass);
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        boolean finished = p.waitFor(30, TimeUnit.SECONDS);
+        if (!finished) {
+            p.destroyForcibly();
+            System.err.println("java subprocess timed out for " + mainClass);
+            return;
+        }
+        String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        if (!out.isEmpty()) {
+            System.out.println("[java " + mainClass + "]\n" + out);
+        }
+        if (p.exitValue() != 0) {
+            System.err.println("java exited with " + p.exitValue() + " for " + mainClass);
+        }
+    }
 }

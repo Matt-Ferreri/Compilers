@@ -20,6 +20,10 @@ Cursor was used as a tool to assist with this codebase.
         - dead code elimiation:code that is impossible to reach, such as while(0==1) is elimiated to keep 
         - loop unrolling: loops that only run a couple of times change to repeat code so there is less branching and no looping in the assembler. Implements loop unrolling for loops that run less that 5 times 
 
+    Code gen:
+    Code done completely by cursor:
+    - takes in DSL program, once it gets past AST converts it to java source code, prints it in terminal (and a file), runs it, and shows results
+
 
 ## Corrections and limitations
 
