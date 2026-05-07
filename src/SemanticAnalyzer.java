@@ -74,6 +74,7 @@ public class SemanticAnalyzer {
         checkScopeAndTypes(tokens);
         propagateConstants(AST.getRoot());
         foldConstantExpressions(AST.getRoot());
+        eliminateUnreachableCode(AST.getRoot());
         return AST;
     }
 
@@ -698,6 +699,99 @@ public class SemanticAnalyzer {
             }
         }
         return null;
+    }
+
+    // --- dead code elimination: remove unreachable if/while branches (constant conditions) ---
+
+    /**
+     * Removes {@code if(false)} / {@code while(false)} and hoists {@code if(true)} bodies into the
+     * enclosing block. Run after constant folding so conditions are often literal.
+     */
+    private void eliminateUnreachableCode(Tree.Node root) {
+        if (root == null) {
+            return;
+        }
+        eliminateUnreachableInSubtree(root);
+    }
+
+    private void eliminateUnreachableInSubtree(Tree.Node n) {
+        if (n == null) {
+            return;
+        }
+        if ("Block".equals(n.name)) {
+            List<Tree.Node> replacement = new ArrayList<>();
+            for (Tree.Node child : new ArrayList<>(n.children)) {
+                eliminateUnreachableInSubtree(child);
+                replacement.addAll(transformStatementForDeadCodeElimination(child));
+            }
+            n.children.clear();
+            for (Tree.Node x : replacement) {
+                x.parent = n;
+                n.children.add(x);
+            }
+            return;
+        }
+        if (n.children != null) {
+            for (Tree.Node c : n.children) {
+                eliminateUnreachableInSubtree(c);
+            }
+        }
+    }
+
+    /** Folded {@code true}/{@code false} condition, or {@code null} if not compile-time constant. */
+    private Boolean foldedBooleanCondition(Tree.Node cond) {
+        if (cond == null || !"BooleanExpr".equals(cond.name)) {
+            return null;
+        }
+        return evaluateBoolLiteral(cond);
+    }
+
+    /**
+     * Returns statements that replace {@code stmt} (empty if removed, many if {@code if(true)} hoisted).
+     */
+    private List<Tree.Node> transformStatementForDeadCodeElimination(Tree.Node stmt) {
+        List<Tree.Node> one = new ArrayList<>(1);
+        one.add(stmt);
+        if (stmt == null) {
+            return new ArrayList<>();
+        }
+        if ("IfStatement".equals(stmt.name)) {
+            if (stmt.children == null || stmt.children.isEmpty()) {
+                return one;
+            }
+            Tree.Node cond = stmt.children.get(0);
+            Boolean lit = foldedBooleanCondition(cond);
+            if (Boolean.FALSE.equals(lit)) {
+                return new ArrayList<>();
+            }
+            if (Boolean.TRUE.equals(lit)) {
+                if (stmt.children.size() < 2) {
+                    return one;
+                }
+                Tree.Node body = stmt.children.get(1);
+                if (!"Block".equals(body.name) || body.children == null) {
+                    return one;
+                }
+                List<Tree.Node> hoisted = new ArrayList<>();
+                for (Tree.Node s : body.children) {
+                    hoisted.add(s);
+                }
+                return hoisted;
+            }
+            return one;
+        }
+        if ("WhileStatement".equals(stmt.name)) {
+            if (stmt.children == null || stmt.children.isEmpty()) {
+                return one;
+            }
+            Tree.Node cond = stmt.children.get(0);
+            Boolean lit = foldedBooleanCondition(cond);
+            if (Boolean.FALSE.equals(lit)) {
+                return new ArrayList<>();
+            }
+            return one;
+        }
+        return one;
     }
 
     private boolean isLeaf(Tree.Node node) {

@@ -1,18 +1,19 @@
-
-{
-  STRING a
-  a = "Hello world"
-  print(a )
-  int b
-  b = 3
-  int C
-  c = 3
-  int x 
-  x = 3 + 9
-  if (3=4){
-    print(x)
-  }
-}
-$
-
-
+
+{
+  STRING a
+  a = "Hello world"
+  print(a )
+  int b
+  b = 3
+  int C
+  c = 3
+  int x 
+  x = 3 + 9
+  if (3=4){
+    print(x)
+  }
+}
+$
+
+
+
