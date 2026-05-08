@@ -320,7 +320,7 @@ public class CodeGen {
             }
             // blocks generate for code their children and add a scope ot the stack
             case "Block" -> {
-                int sid = nextBlockScopeId++;
+                int sid = n.blockScopeId >= 0 ? n.blockScopeId : nextBlockScopeId++;
                 scopeStack.add(sid);
                 for (Tree.Node c : n.children) {
                     genNode(c);
@@ -388,9 +388,21 @@ public class CodeGen {
         // if the variable is a boolean, generate code to assign the value of the right hand side to the left hand side
         } else if ("boolean".equals(dest.type)) {
             Boolean b = booleanLiteral(rhs);
-            // emit the opcode to load the value into the accumulator
-            emitOp(LDA_IMM, b ? 1 : 0);
-            // emit the opcode to store the value in the variable
+            if (b != null) {
+                emitOp(LDA_IMM, b ? 1 : 0);
+            } else {
+                String other = findIdInSubtree(rhs);
+                if (other != null) {
+                    Symbol src = lookup(other);
+                    if (src != null && "boolean".equals(src.type)) {
+                        emitAbsSym(LDA_ABS, src);
+                    } else {
+                        emitOp(LDA_IMM, 0);
+                    }
+                } else {
+                    emitOp(LDA_IMM, 0);
+                }
+            }
             emitAbsSym(STA_ABS, dest);
         }
     }

@@ -76,6 +76,7 @@ public class SemanticAnalyzer {
         foldConstantExpressions(AST.getRoot());
         propagateConstants(AST.getRoot());
         foldConstantExpressions(AST.getRoot());
+        labelAstBlockScopes(AST.getRoot(), tokens);
         eliminateUnreachableCode(AST.getRoot());
         foldConstantExpressions(AST.getRoot());
         return AST;
@@ -603,23 +604,93 @@ public class SemanticAnalyzer {
         if (n.children == null || n.children.isEmpty()) {
             return;
         }
-        rewriteIdsToConstantsInSubtree(n.children.get(0));
+        // Do not substitute IDs into the condition if the body assigns them: the condition is
+        // re-evaluated each iteration (unlike a single-shot if). Example: after "l = 0", rewriting
+        // "0 == l" using l's constant 0 yields "0 == 0" even though l changes in the loop body.
+        Set<String> skipIds = new HashSet<>();
+        if (n.children.size() >= 2 && "Block".equals(n.children.get(1).name)) {
+            collectVarsAssignedInLoopBody(n.children.get(1), skipIds);
+        }
+        rewriteIdsToConstantsInSubtree(n.children.get(0), skipIds);
         if (n.children.size() >= 2 && "Block".equals(n.children.get(1).name)) {
             propagateBlock(n.children.get(1), false);
         }
     }
 
+    /** All variables assigned anywhere in a while body (including nested blocks / inner loops). */
+    private void collectVarsAssignedInLoopBody(Tree.Node body, Set<String> out) {
+        if (body == null) {
+            return;
+        }
+        if ("Block".equals(body.name)) {
+            if (body.children != null) {
+                for (Tree.Node stmt : body.children) {
+                    collectVarsAssignedInStatement(stmt, out);
+                }
+            }
+            return;
+        }
+        collectVarsAssignedInStatement(body, out);
+    }
+
+    private void collectVarsAssignedInStatement(Tree.Node stmt, Set<String> out) {
+        if (stmt == null) {
+            return;
+        }
+        switch (stmt.name) {
+            case "AssignmentStatement" -> {
+                if (stmt.children != null && !stmt.children.isEmpty()) {
+                    Tree.Node lhs = stmt.children.get(0);
+                    if (lhs != null && lhs.name != null) {
+                        out.add(lhs.name);
+                    }
+                }
+            }
+            case "IfStatement" -> {
+                if (stmt.children != null) {
+                    for (Tree.Node c : stmt.children) {
+                        if (c != null && "Block".equals(c.name)) {
+                            collectVarsAssignedInLoopBody(c, out);
+                        }
+                    }
+                }
+            }
+            case "WhileStatement" -> {
+                if (stmt.children != null && stmt.children.size() >= 2) {
+                    Tree.Node inner = stmt.children.get(1);
+                    if (inner != null && "Block".equals(inner.name)) {
+                        collectVarsAssignedInLoopBody(inner, out);
+                    }
+                }
+            }
+            case "Block" -> collectVarsAssignedInLoopBody(stmt, out);
+            default -> {
+            }
+        }
+    }
+
     /** Post-order: replace reads of propagated constants with literal subtrees. */
     private void rewriteIdsToConstantsInSubtree(Tree.Node n) {
+        rewriteIdsToConstantsInSubtree(n, null);
+    }
+
+    /**
+     * Like {@link #rewriteIdsToConstantsInSubtree(Tree.Node)} but never replaces identifiers listed
+     * in {@code skipIds} (non-null set).
+     */
+    private void rewriteIdsToConstantsInSubtree(Tree.Node n, Set<String> skipIds) {
         if (n == null) {
             return;
         }
         if (n.children != null) {
             for (Tree.Node c : new ArrayList<>(n.children)) {
-                rewriteIdsToConstantsInSubtree(c);
+                rewriteIdsToConstantsInSubtree(c, skipIds);
             }
         }
         if (!isLeaf(n)) {
+            return;
+        }
+        if (skipIds != null && skipIds.contains(n.name)) {
             return;
         }
         ConstPropFrame f = constPropFrameStack.peek();
@@ -1025,6 +1096,7 @@ public class SemanticAnalyzer {
 
     private Tree.Node copyAstNode(Tree.Node n) {
         Tree.Node c = new Tree.Node(n.name);
+        c.blockScopeId = n.blockScopeId;
         if (n.children != null) {
             for (Tree.Node ch : n.children) {
                 Tree.Node cc = copyAstNode(ch);
@@ -1437,5 +1509,48 @@ public class SemanticAnalyzer {
         }
 
         return null;
+    }
+
+    /**
+     * Opening scope id for each {@code LBRACE} in source order (matches {@link #checkScopeAndTypes}).
+     */
+    private static ArrayDeque<Integer> collectBraceScopeIdsInOrder(List<Token> tokens) {
+        ArrayDeque<Integer> q = new ArrayDeque<>();
+        int activeScope = -1;
+        int currentScope = 0;
+        Hashtable<Integer, Integer> localParent = new Hashtable<>();
+        for (Token token : tokens) {
+            if (token.tokenType == Lex.characterType.LBRACE) {
+                int opening = currentScope;
+                localParent.put(opening, activeScope);
+                activeScope = opening;
+                q.addLast(opening);
+                currentScope++;
+            } else if (token.tokenType == Lex.characterType.RBRACE) {
+                activeScope = localParent.getOrDefault(activeScope, -1);
+            }
+        }
+        return q;
+    }
+
+    /** DFS preorder assigns each AST {@code Block} the next id from {@link #collectBraceScopeIdsInOrder}. */
+    private static void labelAstBlockScopes(Tree.Node n, List<Token> tokens) {
+        if (n == null) {
+            return;
+        }
+        ArrayDeque<Integer> deque = collectBraceScopeIdsInOrder(tokens);
+        labelAstBlockScopesDfs(n, deque);
+    }
+
+    private static void labelAstBlockScopesDfs(Tree.Node n, ArrayDeque<Integer> deque) {
+        if (n == null) {
+            return;
+        }
+        if ("Block".equals(n.name) && !deque.isEmpty()) {
+            n.blockScopeId = deque.removeFirst();
+        }
+        for (Tree.Node c : n.children) {
+            labelAstBlockScopesDfs(c, deque);
+        }
     }
 }

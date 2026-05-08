@@ -22,18 +22,26 @@
     while (1 != 1) {
       print(a)
     }
-    int l
-    l = 0
-    while (0 == l) {
+    while (0 == 0) {
       int k
       k = 1
       print(k)
       k = 1 + k
-      l = 1 + l
       if (k != 1) {
       }
     }
   }
   print(a)
   print(s)
+}$
+{
+  int x
+  x = 0
+  if (x == x) {
+    boolean x
+    x = false
+    if (true != x) {
+      print(1)
+    }
+  }
 }$
