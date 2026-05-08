@@ -16,6 +16,16 @@ After a successful compile of each source program, artifacts are written under *
 - **`out/program_<N>.ll`** — LLVM IR text (verify with **`clang`** or **`lli`** when LLVM is installed).
 - **`out/compile/Program<N>.class`** — JVM bytecode from ASM; run with `java -cp out compile.Program<N>`.
 - **`out/java_src/compile/Program<N>.java`** — readable Java source generated from the AST; compile with **`javac`** to compare with the ASM path.
+- **`out/ts_src/compile/Program<N>.ts`** — TypeScript emitted from the same AST; compile with **`tsc`** and run with **Node** to compare stdout with Java / JVM.
+
+**`tsc` / `node` on generated TypeScript** (requires [Node.js](https://nodejs.org/) and TypeScript: `npm install -g typescript`):
+
+```powershell
+tsc --outDir out\ts_js --rootDir out\ts_src --module commonjs --target ES2020 --strict out\ts_src\compile\Program1.ts
+node out\ts_js\compile\Program1.js
+```
+
+Emit lands in **`out/ts_js/compile/Program<N>.js`**. Toggle **`isTypeScriptVerbose`** and **`runTscAfterCompile`** in `src/main.java` to print the `.ts` or run `tsc` + `node` automatically after each program. Compare **`[node out/ts_js/compile/ProgramN.js]`** lines in the log with **`[java compile.ProgramN from javac]`** and the JVM run when those are enabled; all should print the same sequence as the language `print` statements.
 
 **`javac` / `java` on generated Java** (project root; ASM is **not** needed for this step):
 
@@ -26,7 +36,7 @@ java -cp out\javac_classes compile.Program1
 
 Classes land in **`out/javac_classes/compile/Program<N>.class`**, separate from **`out/compile/Program<N>.class`** (ASM), so you can compare bytecode (e.g. `javap -c`) or run both and compare stdout.
 
-In `src/main.java`, toggle **`isLlvmVerbose`**, **`isJvmVerbose`**, **`isJavaSourceVerbose`**, **`runJvmAfterCompile`**, and **`runJavacAfterCompile`** to print artifacts or launch subprocesses.
+In `src/main.java`, toggle **`isLlvmVerbose`**, **`isJvmVerbose`**, **`isJavaSourceVerbose`**, **`isTypeScriptVerbose`**, **`runJvmAfterCompile`**, **`runJavacAfterCompile`**, and **`runTscAfterCompile`** to print artifacts or launch subprocesses.
 
 ## Getting Started
 

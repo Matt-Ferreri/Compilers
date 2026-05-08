@@ -20,10 +20,9 @@ Cursor was used as a tool to assist with this codebase.
         - dead code elimiation:code that is impossible to reach, such as while(0==1) is elimiated to keep 
         - loop unrolling: loops that only run a couple of times change to repeat code so there is less branching and no looping in the assembler. Implements loop unrolling for loops that run less that 5 times 
 
-    Code gen:
-    Code done completely by cursor:
-    - takes in Alan++ program, once it gets past AST converts it to java source code, prints it in terminal (and a file), runs it, and shows results
-    - java code generator: takes in code, runs through code generator, variables have to be declared by scope as java needs to scope to end to be able to declare that variable name again 
+    Code gen (AST → source; Cursor-assisted):
+    - **Java source code generator** (`JavaSourceCodeGen`): walks the AST like the JVM backend; emits `out/java_src/compile/ProgramN.java` with package `compile`. Same-block redeclarations use a **per-name binding stack** and mangled locals (`name_s<scope>_d<n>`) because Java does not allow two locals with the same simple name in one method the way the mini-language does. **`while (true)`** is avoided so `javac` does not reject unreachable code after the loop (uses a runtime-always-true non-constant condition). Wired in `main.java` with optional `javac` + `java` subprocesses to compare stdout with other backends.
+    - **TypeScript source code generator** (`TypeScriptSourceCodeGen`): same AST walk and **same binding / mangling / infinite-while** behavior as the Java emitter, adapted to TypeScript syntax: `function main(): void { … }`, `main();`, `let id: number | boolean | string`, and `console.log` for `print`. Writes **`out/ts_src/compile/ProgramN.ts`**. `main.java` can run **`tsc`** (emit to **`out/ts_js/compile/ProgramN.js`**) and then **`node`** on that file to compare output. On **Windows**, `tsc` is invoked as **`cmd.exe /c tsc …`** so the JVM finds the same `tsc.cmd` shim as an interactive terminal (fixes `CreateProcess error=2` when using `ProcessBuilder("tsc", …)` alone). 
 
 
 ## Corrections and limitations
