@@ -1,0 +1,40 @@
+{
+  int x
+  x = 0
+  #
+}$
+{
+  int a
+  a = 1
+  @
+}$
+{
+  int x
+  x = 0
+$
+{
+  int x
+  x = 0
+  print x
+}$
+{
+  int x
+  x = 0
+  +
+}$
+{
+  if (1 = 2) {
+    int k
+    k = 0
+    print(k)
+  }
+}$
+{
+  int y
+  y = 2
+  print(y)
+}$
+{
+  string s
+  s = "never_closes
+}$
